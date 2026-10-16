@@ -1,0 +1,6 @@
+{
+  "name": "VaultZero",
+  "description": "Zero-knowledge, offline-first password and cryptographic secret manager with military-grade encryption and security auditing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
