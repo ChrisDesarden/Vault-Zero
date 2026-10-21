@@ -12,14 +12,15 @@
 
 ## 📲 Download & Easy APK Installation
 
-Get **VaultZero** running on your Android device in under a minute. The compiled, signed APK binary is included directly in this repository under [`/releases`](releases/README.md) (`10.88 MB`) and is also built & published automatically by GitHub Actions ([`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml)).
+Get **VaultZero** running on your Android device in under a minute. The compiled, R8-optimized signed APK binary (`2.04 MB`) is included directly in this repository under [`/releases`](releases/README.md) (`releases/VaultZero-v1.0.0.apk`) and is also published automatically to GitHub Releases by GitHub Actions ([`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml)).
 
 ### Direct APK Download & Release Pages
 
 | Release Channel | Version | Size | Minimum Android | Direct Link |
 | :--- | :--- | :--- | :--- | :--- |
-| **Releases & Download Center** | `v1.0.0` | `10.88 MB` | Android 7.0+ (API 24+) | [**📦 Open Releases & Download Center (`releases/README.md`)**](releases/README.md) |
-| **Latest Installable APK** | `v1.0.0` | `10.88 MB` | Android 7.0+ (API 24+) | [**⬇️ Download `VaultZero-v1.0.0.apk`**](releases/VaultZero-v1.0.0.apk?raw=true) |
+| **Releases & Download Center** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**📦 Open Releases & Download Center (`releases/README.md`)**](releases/README.md) |
+| **Latest Installable APK (Repo)** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**⬇️ Download `VaultZero-v1.0.0.apk`**](releases/VaultZero-v1.0.0.apk?raw=true) |
+| **Latest Installable APK (Releases)** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**🚀 Download from GitHub Releases (`v1.0.0`)**](../../releases/latest/download/VaultZero-v1.0.0.apk) |
 | **v1.0.0 Release Notes & Spec** | `v1.0.0` | — | Android 7.0+ (API 24+) | [**📋 View `v1.0.0` Release Notes (`releases/v1.0.0.md`)**](releases/v1.0.0.md) |
 | **SHA-256 Checksum File** | `v1.0.0` | `87 B` | All Platforms | [**🔐 View `VaultZero-v1.0.0.apk.sha256`**](releases/VaultZero-v1.0.0.apk.sha256) |
 | **Web Download Portal (HTML)** | `v1.0.0` | — | Browser / GitHub Pages | [**🌐 View Web Download Portal (`docs/index.html`)**](docs/index.html) |
@@ -28,7 +29,7 @@ Get **VaultZero** running on your Android device in under a minute. The compiled
 
 1. **Download the APK**:
    - Open the [**📦 Releases & Download Center**](releases/README.md) or tap [**⬇️ Download `VaultZero-v1.0.0.apk`**](releases/VaultZero-v1.0.0.apk?raw=true) directly on your Android phone or tablet.
-   - *(Note: Remember to push/sync the latest changes to GitHub so `releases/VaultZero-v1.0.0.apk` and `.github/workflows/release-apk.yml` are on your GitHub repository).*
+   - *(Note: After any changes in AI Studio, click **Save / Sync to GitHub** in AI Studio so the new `2.04 MB` `releases/VaultZero-v1.0.0.apk` binary and workflow are pushed to `ChrisDesarden/Vault-Zero`).*
 2. **Allow Installation from Browser/Files**:
    - Open the downloaded `VaultZero-v1.0.0.apk` file from your notification shade or **Files / Downloads** app.
    - If prompted with *"For your security, your phone currently isn't allowed to install unknown apps from this source"*, tap **Settings** and toggle on **Allow from this source**.
@@ -42,7 +43,7 @@ Get **VaultZero** running on your Android device in under a minute. The compiled
 
 **Official `v1.0.0` SHA-256 Digest:**
 ```text
-f5d71021932c4774c88ae0b9a3233f53a72ca58d8bdb6e567608d9d971b35ae3  VaultZero-v1.0.0.apk
+7918afaeb8f7007d9503f665110ea83d084397e704c082eb35e914d0c2002270  VaultZero-v1.0.0.apk
 ```
 
 Before installing on high-security devices, you can verify the APK signature and SHA-256 checksum:
