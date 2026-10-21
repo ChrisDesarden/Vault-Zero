@@ -143,7 +143,7 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun `security audit engine accurately scores weak reused stale and missing totp`() {
+    fun `security audit engine accurately scores weak reused stale and malformed totp without penalizing optional blank 2fa`() {
         val now = 1_700_000_000_000L
         val ninetyOneDaysAgo = now - (91L * 24 * 60 * 60 * 1000L)
         val tenDaysAgo = now - (10L * 24 * 60 * 60 * 1000L)
@@ -154,9 +154,9 @@ class ExampleUnitTest {
         assertEquals("A+", emptyReport.grade)
 
         // Fortified login with valid TOTP and recent update -> 100 A+
-        val healthyItem = VaultItem(
+        val healthyItemWithTotp = VaultItem(
             id = "1",
-            title = "Healthy Login",
+            title = "Healthy Login With 2FA",
             type = VaultType.LOGIN,
             updatedAt = tenDaysAgo,
             payload = LoginPayload(
@@ -165,12 +165,28 @@ class ExampleUnitTest {
                 totpSecret = "JBSWY3DPEHPK3PXP"
             )
         )
-        val healthyReport = SecurityAuditEngine.analyzeVault(listOf(healthyItem), now)
+        // Fortified login WITHOUT 2FA (blank optional TOTP) -> must also be 100 A+ with zero action items
+        val healthyItemWithoutTotp = VaultItem(
+            id = "1b",
+            title = "Healthy Login Without 2FA",
+            type = VaultType.LOGIN,
+            updatedAt = tenDaysAgo,
+            payload = LoginPayload(
+                username = "bob",
+                password = "x7!qW9#zM4\$pL2@nK8&v",
+                totpSecret = ""
+            )
+        )
+        val healthyReport = SecurityAuditEngine.analyzeVault(
+            listOf(healthyItemWithTotp, healthyItemWithoutTotp),
+            now
+        )
         assertEquals(100, healthyReport.score)
         assertEquals("A+", healthyReport.grade)
+        assertEquals(0, healthyReport.missing2faCount)
         assertTrue(healthyReport.vulnerabilities.isEmpty())
 
-        // Vulnerable logins: reused weak password, stale timestamp, missing TOTP
+        // Vulnerable logins: reused weak password, stale timestamp, and malformed TOTP secret
         val vuln1 = VaultItem(
             id = "2",
             title = "Site A",
@@ -191,7 +207,7 @@ class ExampleUnitTest {
         assertEquals(2, audit.weakCount)
         assertEquals(2, audit.reusedCount)
         assertEquals(1, audit.staleCount)
-        assertEquals(2, audit.missing2faCount)
+        assertEquals(1, audit.missing2faCount)
         assertTrue(audit.vulnerabilities.any { it.type == VulnerabilityType.REUSED_PASSWORD })
         assertTrue(audit.vulnerabilities.any { it.type == VulnerabilityType.WEAK_PASSWORD })
         assertTrue(audit.vulnerabilities.any { it.type == VulnerabilityType.STALE_PASSWORD })

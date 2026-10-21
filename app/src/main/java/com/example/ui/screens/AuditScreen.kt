@@ -190,7 +190,7 @@ fun AuditScreen(
                     modifier = Modifier.weight(1f)
                 )
                 MetricPill(
-                    title = "No 2FA",
+                    title = "2FA Error",
                     count = report.missing2faCount,
                     color = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.weight(1f)

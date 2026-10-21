@@ -91,10 +91,11 @@ object SecurityAuditEngine {
                 )
             }
 
-            // Local TOTP configuration check (distinguishes local TOTP secret from external account 2FA status)
-            val hasValidLocalTotp = payload.totpSecret.isNotBlank() &&
-                    VaultCrypto.generateTotp(payload.totpSecret, nowMillis) != null
-            if (!hasValidLocalTotp) {
+            // Optional local TOTP validation: leaving 2FA blank is valid since not every login uses local TOTP;
+            // only flag an action item if the user entered a non-blank secret that is malformed Base32.
+            if (payload.totpSecret.isNotBlank() &&
+                VaultCrypto.generateTotp(payload.totpSecret, nowMillis) == null
+            ) {
                 missing2faCount++
                 vulnerabilities.add(
                     Vulnerability(
@@ -102,12 +103,8 @@ object SecurityAuditEngine {
                         itemTitle = item.title,
                         type = VulnerabilityType.MISSING_2FA,
                         severity = Severity.WARNING,
-                        description = if (payload.totpSecret.isBlank()) {
-                            "No local TOTP secret stored in VaultZero (external 2FA status unverified)"
-                        } else {
-                            "Stored TOTP secret is malformed Base32"
-                        },
-                        recommendation = "If this service supports TOTP 2FA, add a valid Base32 secret key to generate one-time codes"
+                        description = "Stored TOTP secret is malformed Base32",
+                        recommendation = "Enter a valid Base32 secret key to generate 2FA codes, or clear the optional 2FA field"
                     )
                 )
             }

@@ -4,7 +4,7 @@ enum class VulnerabilityType(val title: String) {
     WEAK_PASSWORD("Weak Password"),
     REUSED_PASSWORD("Reused Password"),
     STALE_PASSWORD("Stale Password (>90d)"),
-    MISSING_2FA("Missing 2FA / TOTP")
+    MISSING_2FA("Invalid 2FA / TOTP")
 }
 
 enum class Severity {
