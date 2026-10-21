@@ -12,42 +12,51 @@
 
 ## 📲 Download & Easy APK Installation
 
-Get **VaultZero** running on your Android device in under a minute using our pre-built APK release.
+Get **VaultZero** running on your Android device in under a minute. The compiled, signed APK binary is included directly in this repository under [`/releases`](releases/README.md) for immediate one-click download on GitHub.
 
-### Direct APK Download
+### Direct APK Download & Release Pages
 
-| Release Channel | Version | Minimum Android | Direct Download Link |
-| :--- | :--- | :--- | :--- |
-| **Latest Stable Release** | `v1.0.0` | Android 7.0+ (API 24+) | [**⬇️ Download VaultZero-v1.0.0.apk**](../../releases/latest/download/app-release.apk) |
-| **All Releases & Changelogs** | All | Android 7.0+ (API 24+) | [**📦 View GitHub Releases Page**](../../releases) |
-| **Debug / Testing APK** | `v1.0.0-debug` | Android 7.0+ (API 24+) | [**⬇️ Download app-debug.apk**](../../releases/latest/download/app-debug.apk) |
-
-> **Repository Maintainer Note:** When publishing a new GitHub Release, attach your signed `app-release.apk` (or `app-debug.apk`) to the release assets. The relative `/releases/latest/download/...` links above will automatically resolve to your latest published APK on GitHub!
+| Release Channel | Version | Size | Minimum Android | Direct Link |
+| :--- | :--- | :--- | :--- | :--- |
+| **Latest Installable APK** | `v1.0.0` | `23.28 MB` | Android 7.0+ (API 24+) | [**⬇️ Download VaultZero-v1.0.0.apk**](releases/VaultZero-v1.0.0.apk?raw=true) |
+| **Releases & Download Center** | `v1.0.0` | — | Android 7.0+ (API 24+) | [**📦 Open Releases & Download Page**](releases/README.md) |
+| **v1.0.0 Release Notes & Spec** | `v1.0.0` | — | Android 7.0+ (API 24+) | [**📋 View v1.0.0 Release Notes**](releases/v1.0.0.md) |
+| **SHA-256 Checksum File** | `v1.0.0` | `90 B` | All Platforms | [**🔐 Download VaultZero-v1.0.0.apk.sha256**](releases/VaultZero-v1.0.0.apk.sha256?raw=true) |
+| **Web Download Portal (HTML)** | `v1.0.0` | — | Browser / GitHub Pages | [**🌐 View Web Download Page (`docs/index.html`)**](docs/index.html) |
 
 ### Step-by-Step Installation Guide (Android)
 
-1. **Download the APK**: Tap the [**Download VaultZero APK**](../../releases/latest/download/app-release.apk) link above directly on your Android phone or tablet.
+1. **Download the APK**: Tap [**⬇️ Download VaultZero-v1.0.0.apk**](releases/VaultZero-v1.0.0.apk?raw=true) above directly on your Android phone or tablet (or open the [Releases Center](releases/README.md) and tap **Download raw file**).
 2. **Allow Installation from Browser/Files**:
-   - Open the downloaded `.apk` file from your notification shade or **Files / Downloads** app.
+   - Open the downloaded `VaultZero-v1.0.0.apk` file from your notification shade or **Files / Downloads** app.
    - If prompted with *"For your security, your phone currently isn't allowed to install unknown apps from this source"*, tap **Settings** and toggle on **Allow from this source**.
 3. **Install & Launch**: Tap **Install**, then tap **Open** to launch **VaultZero**.
-4. **Initialize Your Vault**:
+4. **Initialize Your Clean Vault**:
+   - Your vault starts completely empty and ready for your credentials.
    - Choose a strong **Master Password** (minimum 8 characters; evaluated by the real-time entropy engine).
    - Write down your **12-Word SHA-256 Checksummed Recovery Phrase** and store it in a secure offline location.
 
-### Verify APK Integrity (Optional SHA-256 Check)
+### Verify APK Integrity (SHA-256 Checksum)
 
-Before installing on high-security devices, you can verify the APK signature and SHA-256 checksum against the release notes:
+**Official `v1.0.0` SHA-256 Digest:**
+```text
+107ccffb4acf0cf8f6bf59d1499fb65a98c6cbc7b6d8a906c7d439facf627a8d  VaultZero-v1.0.0.apk
+```
+
+Before installing on high-security devices, you can verify the APK signature and SHA-256 checksum:
 
 ```bash
 # Verify SHA-256 checksum (Linux / macOS)
-shasum -a 256 app-release.apk
+shasum -a 256 VaultZero-v1.0.0.apk
+
+# Or verify automatically against the checksum file in /releases:
+cd releases && shasum -a 256 -c VaultZero-v1.0.0.apk.sha256
 
 # Verify SHA-256 checksum (Windows PowerShell)
-Get-FileHash .\app-release.apk -Algorithm SHA256
+Get-FileHash .\VaultZero-v1.0.0.apk -Algorithm SHA256
 
 # Verify APK signing certificate using Android SDK apksigner
-apksigner verify --print-certs app-release.apk
+apksigner verify --print-certs VaultZero-v1.0.0.apk
 ```
 
 ---
