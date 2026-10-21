@@ -43,10 +43,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -256,13 +258,25 @@ fun SensitiveValueRow(
     isMaskable: Boolean = true
 ) {
     var isRevealed by remember { mutableStateOf(!isMaskable) }
+    var justCopied by remember { mutableStateOf(false) }
+
+    LaunchedEffect(justCopied) {
+        if (justCopied) {
+            delay(1400L)
+            justCopied = false
+        }
+    }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .border(
+                1.dp,
+                if (justCopied) CyberEmerald.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                RoundedCornerShape(12.dp)
+            )
             .padding(12.dp)
     ) {
         Row(
@@ -273,7 +287,7 @@ fun SensitiveValueRow(
             Text(
                 text = label.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (justCopied) CyberEmerald else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -291,11 +305,14 @@ fun SensitiveValueRow(
                     }
                 }
                 IconButton(
-                    onClick = onCopy,
+                    onClick = {
+                        justCopied = true
+                        onCopy()
+                    },
                     modifier = Modifier.size(32.dp).testTag("copy_${label.lowercase()}")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
+                        imageVector = if (justCopied) Icons.Default.Check else Icons.Default.ContentCopy,
                         contentDescription = "Copy $label",
                         tint = CyberEmerald,
                         modifier = Modifier.size(18.dp)
@@ -313,6 +330,58 @@ fun SensitiveValueRow(
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+fun VaultStatusPill(
+    status: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LaunchedEffect(status) {
+        delay(2200L)
+        onDismiss()
+    }
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = Color(0xFF111827).copy(alpha = 0.96f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CyberEmerald.copy(alpha = 0.45f)),
+        shadowElevation = 6.dp,
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .clickable { onDismiss() }
+            .testTag("vault_status_pill")
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(CyberEmerald.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = CyberEmerald,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = status,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = JetBrainsMonoFamily,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 

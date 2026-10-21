@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Favorite
@@ -47,6 +49,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +80,7 @@ import com.example.ui.theme.CyberCyan
 import com.example.ui.theme.CyberEmerald
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.JetBrainsMonoFamily
+import kotlinx.coroutines.delay
 
 @Composable
 fun VaultListScreen(
@@ -88,8 +92,13 @@ fun VaultListScreen(
     val selectedType by viewModel.selectedTypeFilter.collectAsState()
     val favoritesOnly by viewModel.favoritesOnly.collectAsState()
     val clockTicker by viewModel.clockTicker.collectAsState()
+    val clipboardStatus by viewModel.clipboardStatus.collectAsState()
 
     var showCreateMenu by remember { mutableStateOf(false) }
+    val fabBottomPadding by animateDpAsState(
+        targetValue = if (clipboardStatus != null) 72.dp else 20.dp,
+        label = "fabBottomPadding"
+    )
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -311,7 +320,7 @@ fun VaultListScreen(
             onClick = { showCreateMenu = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(20.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = fabBottomPadding)
                 .testTag("add_item_fab"),
             containerColor = CyberEmerald,
             contentColor = Color.Black,
@@ -419,12 +428,22 @@ private fun VaultItemCard(
                 }
 
                 if (copyValue.isNotEmpty()) {
+                    var justCopied by remember { mutableStateOf(false) }
+                    LaunchedEffect(justCopied) {
+                        if (justCopied) {
+                            delay(1400L)
+                            justCopied = false
+                        }
+                    }
                     IconButton(
-                        onClick = { onCopyPrimary(copyLabel, copyValue) },
+                        onClick = {
+                            justCopied = true
+                            onCopyPrimary(copyLabel, copyValue)
+                        },
                         modifier = Modifier.size(36.dp).testTag("quick_copy_${item.id}")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ContentCopy,
+                            imageVector = if (justCopied) Icons.Default.Check else Icons.Default.ContentCopy,
                             contentDescription = "Quick Copy $copyLabel",
                             tint = CyberEmerald,
                             modifier = Modifier.size(18.dp)

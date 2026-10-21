@@ -122,12 +122,24 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private var clipboardJob: Job? = null
     private var autoLockJob: Job? = null
+    private var statusDismissJob: Job? = null
 
     @Volatile
     private var lastInteractionRealtime: Long = SystemClock.elapsedRealtime()
 
     @Volatile
     private var lastCopiedSensitiveValue: String? = null
+
+    private fun postStatusMessage(message: String, durationMs: Long = 2200L) {
+        _clipboardStatus.value = message
+        statusDismissJob?.cancel()
+        statusDismissJob = viewModelScope.launch {
+            delay(durationMs)
+            if (_clipboardStatus.value == message) {
+                _clipboardStatus.value = null
+            }
+        }
+    }
 
     init {
         val database = VaultDatabase.getInstance(application)
@@ -438,7 +450,9 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         autoLockJob?.cancel()
         clearSensitiveClipboardIfOwned()
         if (autoLocked) {
-            _clipboardStatus.value = "Vault auto-locked due to inactivity"
+            postStatusMessage("Vault auto-locked due to inactivity")
+        } else {
+            dismissClipboardStatus()
         }
     }
 
@@ -527,10 +541,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 repository.saveItem(item)
                 _editingItem.value = null
                 _viewingItem.value = null
-                _clipboardStatus.value = "Saved '${item.title}' securely"
+                postStatusMessage("Saved '${item.title}' securely")
                 onUserInteraction()
             } catch (e: Exception) {
-                _clipboardStatus.value = "Failed to save: ${e.message}"
+                postStatusMessage("Failed to save: ${e.message}")
             }
         }
     }
@@ -541,7 +555,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 repository.toggleFavorite(item.id, !item.isFavorite)
                 onUserInteraction()
             } catch (e: Exception) {
-                _clipboardStatus.value = "Cannot update favorite while locked"
+                postStatusMessage("Cannot update favorite while locked")
             }
         }
     }
@@ -552,10 +566,10 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 repository.deleteItem(item.id)
                 _viewingItem.value = null
                 _editingItem.value = null
-                _clipboardStatus.value = "Deleted '${item.title}'"
+                postStatusMessage("Deleted '${item.title}'")
                 onUserInteraction()
             } catch (e: Exception) {
-                _clipboardStatus.value = "Failed to delete: ${e.message}"
+                postStatusMessage("Failed to delete: ${e.message}")
             }
         }
     }
@@ -569,7 +583,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             _viewingItem.value = null
             _editingItem.value = null
             _newRecoveryPhrase.value = null
-            _clipboardStatus.value = "Vault completely reset"
+            postStatusMessage("Vault completely reset")
         }
     }
 
@@ -584,7 +598,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 onResult(json)
                 onUserInteraction()
             } catch (e: Exception) {
-                _clipboardStatus.value = "Export failed: ${e.message}"
+                postStatusMessage("Export failed: ${e.message}")
             }
         }
     }
@@ -593,14 +607,15 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val count = repository.importEncryptedBackup(json, backupPassword)
-                _clipboardStatus.value = if (count > 0) {
+                val msg = if (count > 0) {
                     "Restored $count encrypted ${if (count == 1) "entry" else "entries"}"
                 } else {
                     "No compatible records found (verify backup password or format)"
                 }
+                postStatusMessage(msg)
                 onUserInteraction()
             } catch (e: Exception) {
-                _clipboardStatus.value = "Import failed: invalid backup JSON format"
+                postStatusMessage("Import failed: invalid backup JSON format")
             }
         }
     }
@@ -625,11 +640,12 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         clipboardManager.setPrimaryClip(clip)
 
         val timeout = repository.clipboardTimeoutSeconds
-        _clipboardStatus.value = if (isSensitive && timeout > 0) {
-            "$label copied! Auto-clearing in ${timeout}s"
+        val statusMsg = if (isSensitive && timeout > 0) {
+            "$label copied • Auto-clears in ${timeout}s"
         } else {
             "$label copied to clipboard"
         }
+        postStatusMessage(statusMsg)
         onUserInteraction()
 
         clipboardJob?.cancel()
@@ -638,9 +654,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             if (timeout > 0) {
                 clipboardJob = viewModelScope.launch {
                     delay(timeout * 1000L)
-                    if (clearSensitiveClipboardIfOwned()) {
-                        _clipboardStatus.value = "Clipboard cleared for security"
-                    }
+                    clearSensitiveClipboardIfOwned()
                 }
             }
         }
@@ -678,6 +692,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun dismissClipboardStatus() {
+        statusDismissJob?.cancel()
         _clipboardStatus.value = null
     }
 
@@ -692,7 +707,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             !config.includeDigits &&
             !config.includeSymbols
         ) {
-            _clipboardStatus.value = "At least one character set must remain enabled"
+            postStatusMessage("At least one character set must remain enabled")
             return
         }
         val clampedConfig = config.copy(
@@ -729,12 +744,12 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     fun updateAutoLock(seconds: Int) {
         repository.setAutoLockSeconds(seconds)
         resetAutoLockTimer()
-        _clipboardStatus.value = "Auto-lock updated"
+        postStatusMessage("Auto-lock updated")
     }
 
     fun updateClipboardTimeout(seconds: Int) {
         repository.setClipboardTimeoutSeconds(seconds)
-        _clipboardStatus.value = "Clipboard timeout updated"
+        postStatusMessage("Clipboard timeout updated")
     }
 
     fun toggleBiometric(enabled: Boolean) {
@@ -743,14 +758,14 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             if (vmkHex != null) {
                 BiometricKeyManager.storeVmk(getApplication(), vmkHex)
                 repository.setBiometricEnabled(true)
-                _clipboardStatus.value = "Biometric unlock enabled"
+                postStatusMessage("Biometric unlock enabled")
             } else {
-                _clipboardStatus.value = "Please unlock vault with Master Password first"
+                postStatusMessage("Please unlock vault with Master Password first")
             }
         } else {
             BiometricKeyManager.clearBiometricKey(getApplication())
             repository.setBiometricEnabled(false)
-            _clipboardStatus.value = "Biometric unlock disabled"
+            postStatusMessage("Biometric unlock disabled")
         }
     }
 

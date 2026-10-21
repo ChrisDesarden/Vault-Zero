@@ -61,6 +61,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.ui.VaultLockState
 import com.example.ui.VaultNavTab
 import com.example.ui.VaultViewModel
+import com.example.ui.components.VaultStatusPill
 import com.example.ui.screens.AuditScreen
 import com.example.ui.screens.GeneratorScreen
 import com.example.ui.screens.ItemDetailDialog
@@ -69,7 +70,6 @@ import com.example.ui.screens.LockScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.VaultListScreen
 import com.example.ui.theme.CyberEmerald
-import com.example.ui.theme.JetBrainsMonoFamily
 import com.example.ui.theme.VaultZeroTheme
 import kotlinx.coroutines.launch
 
@@ -244,42 +244,25 @@ fun VaultZeroApp(viewModel: VaultViewModel) {
             )
         }
 
-        // Floating Toast for Clipboard Auto-Clear & Security Feedback
+        // Non-intrusive Bottom Floating Pill for Clipboard & Status Feedback
         AnimatedVisibility(
-            visible = clipboardStatus != null,
+            visible = clipboardStatus != null && viewingItem == null,
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut(),
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 48.dp, start = 20.dp, end = 20.dp)
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(
+                    bottom = if (lockState == VaultLockState.UNLOCKED) 92.dp else 28.dp,
+                    start = 20.dp,
+                    end = 20.dp
+                )
         ) {
             clipboardStatus?.let { status ->
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CyberEmerald.copy(alpha = 0.5f)),
-                    shadowElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(CyberEmerald)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = status,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = JetBrainsMonoFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
+                VaultStatusPill(
+                    status = status,
+                    onDismiss = { viewModel.dismissClipboardStatus() }
+                )
             }
         }
     }

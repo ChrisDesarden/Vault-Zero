@@ -53,10 +53,14 @@ import com.example.model.IdentityPayload
 import com.example.model.LoginPayload
 import com.example.model.NotePayload
 import com.example.model.VaultItem
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import com.example.ui.VaultViewModel
 import com.example.ui.components.SensitiveValueRow
 import com.example.ui.components.StrengthMeter
 import com.example.ui.components.TotpLiveBadge
+import com.example.ui.components.VaultStatusPill
 import com.example.ui.components.VaultTypeIcon
 import com.example.ui.theme.CyberEmerald
 import com.example.ui.theme.DangerRed
@@ -70,6 +74,7 @@ fun ItemDetailDialog(
     onEdit: () -> Unit
 ) {
     val clockTicker by viewModel.clockTicker.collectAsState()
+    val clipboardStatus by viewModel.clipboardStatus.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Dialog(
@@ -461,7 +466,23 @@ fun ItemDetailDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                AnimatedVisibility(
+                    visible = clipboardStatus != null,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 14.dp)
+                ) {
+                    clipboardStatus?.let { status ->
+                        VaultStatusPill(
+                            status = status,
+                            onDismiss = { viewModel.dismissClipboardStatus() }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Bottom Action Buttons
                 Row(
