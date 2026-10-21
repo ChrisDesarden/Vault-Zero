@@ -1,0 +1,10 @@
+VaultZero is a zero-knowledge, air-gapped cryptographic vault and password manager for Android. It operates strictly offline with zero network permissions, zero telemetry, and hardware-backed encryption.
+
+Key Features:
+• Dual-Envelope Key Architecture: A random 256-bit Vault Master Key (VMK) is wrapped independently by your Master Password KEK (PBKDF2-HMAC-SHA256, 210,000 iterations) and an Android Keystore hardware-backed AES-256-GCM biometric key.
+• Full Payload Encryption: Vault records (Logins, Payment Cards, Secure Notes, Identity Documents, SSH Keys, and BIP-39 Seed Phrases) are serialized into single AES-256-GCM authenticated ciphertext blobs inside an encrypted Room database.
+• Built-In RFC 6238 Authenticator: Live 30-second TOTP codes (SHA1, SHA256, SHA512; 6 or 8 digits) and otpauth:// URI parser.
+• Cryptographic Generators: High-entropy password generator, EFF diceware passphrase generator, and BIP-39 recovery seed phrase generator using SecureRandom.
+• Security Audit Engine: Offline inspection for reused passwords, weak entropy, compromised patterns, and overdue key rotation.
+• Active Defense: Duress/Decoy password support, Panic Wipe emergency destruction, FLAG_SECURE screenshot blocking, and automatic clipboard scrubbing.
+• Portable Encrypted Backups: Export and restore self-contained .vzero AES-256-GCM encrypted backup containers.

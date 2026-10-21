@@ -1,0 +1,26 @@
+Categories:
+  - Security
+  - System
+License: MIT
+AuthorName: Chris Desarden
+SourceCode: https://github.com/ChrisDesarden/Vault-Zero
+IssueTracker: https://github.com/ChrisDesarden/Vault-Zero/issues
+Changelog: https://github.com/ChrisDesarden/Vault-Zero/blob/main/releases/v1.0.0.md
+
+AutoName: VaultZero
+
+RepoType: git
+Repo: https://github.com/ChrisDesarden/Vault-Zero.git
+
+Builds:
+  - versionName: '1.0'
+    versionCode: 1
+    commit: v1.0.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '1.0'
+CurrentVersionCode: 1

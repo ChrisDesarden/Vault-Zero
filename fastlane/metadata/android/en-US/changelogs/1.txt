@@ -1,0 +1,6 @@
+Initial v1.0.0 release of VaultZero:
+• Offline zero-knowledge AES-256-GCM + PBKDF2-HMAC-SHA256 (210,000 iterations) cryptographic vault
+• Hardware-backed Android Keystore BiometricPrompt CryptoObject unlock
+• Support for Logins (with live RFC 6238 TOTP), Payment Cards, Secure Notes, Identities, SSH Keys, and BIP-39 Seed Phrases
+• Password, Passphrase, and Seed Phrase cryptographic generators
+• Offline Security Audit Engine, Duress Vault, Panic Wipe, and encrypted .vzero backup/restore
