@@ -2,11 +2,8 @@ name: Build & Publish Android APK Release
 
 on:
   push:
-    branches:
-      - "**"
-    paths-ignore:
-      - "releases/*.apk"
-      - "releases/*.sha256"
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -21,34 +18,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore Pre-Compiled Signed APK from Base64 (Fast Path)
-        if: hashFiles('releases/VaultZero-v1.0.0.apk.base64') != ''
-        run: |
-          mkdir -p releases
-          base64 -d releases/VaultZero-v1.0.0.apk.base64 > releases/VaultZero-v1.0.0.apk
-          cd releases
-          sha256sum VaultZero-v1.0.0.apk > VaultZero-v1.0.0.apk.sha256
-          cat VaultZero-v1.0.0.apk.sha256
-
       - name: Set up JDK 21 (Required by AGP 9.1.1 & Gradle 9.3.1)
-        if: hashFiles('releases/VaultZero-v1.0.0.apk') == ''
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Set up Android SDK
-        if: hashFiles('releases/VaultZero-v1.0.0.apk') == ''
         uses: android-actions/setup-android@v3
 
       - name: Set up Gradle 9.3.1
-        if: hashFiles('releases/VaultZero-v1.0.0.apk') == ''
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
 
-      - name: Build Signed Installable APK (Fallback if Base64 Absent)
-        if: hashFiles('releases/VaultZero-v1.0.0.apk') == ''
+      - name: Build Signed Installable Release APK
         run: |
           if [ -f debug.keystore.base64 ]; then
             base64 -d debug.keystore.base64 > debug.keystore
@@ -57,29 +41,18 @@ jobs:
           keytool -changealias -keystore /tmp/upload.jks -storepass android -keypass android -alias androiddebugkey -destalias upload
           KEYSTORE_PATH=/tmp/upload.jks STORE_PASSWORD=android KEY_PASSWORD=android gradle :app:assembleRelease
           rm -f /tmp/upload.jks
-          mkdir -p releases
-          cp app/build/outputs/apk/release/app-release.apk releases/VaultZero-v1.0.0.apk
-          cd releases
+          mkdir -p build/release-assets
+          cp app/build/outputs/apk/release/app-release.apk build/release-assets/VaultZero-v1.0.0.apk
+          cd build/release-assets
           sha256sum VaultZero-v1.0.0.apk > VaultZero-v1.0.0.apk.sha256
-
-      - name: Commit APK Binary to Repository /releases Directory
-        if: github.ref_type == 'branch'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f releases/VaultZero-v1.0.0.apk releases/VaultZero-v1.0.0.apk.sha256
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(release): publish VaultZero-v1.0.0.apk binary [skip ci]"
-            git push origin HEAD:${GITHUB_REF#refs/heads/}
-          fi
 
       - name: Upload APK Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: VaultZero-v1.0.0-APK
           path: |
-            releases/VaultZero-v1.0.0.apk
-            releases/VaultZero-v1.0.0.apk.sha256
+            build/release-assets/VaultZero-v1.0.0.apk
+            build/release-assets/VaultZero-v1.0.0.apk.sha256
 
       - name: Publish Latest GitHub Release (v1.0.0)
         uses: softprops/action-gh-release@v2
@@ -89,5 +62,5 @@ jobs:
           body_path: releases/v1.0.0.md
           make_latest: true
           files: |
-            releases/VaultZero-v1.0.0.apk
-            releases/VaultZero-v1.0.0.apk.sha256
+            build/release-assets/VaultZero-v1.0.0.apk
+            build/release-assets/VaultZero-v1.0.0.apk.sha256

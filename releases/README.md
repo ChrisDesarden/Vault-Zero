@@ -1,6 +1,6 @@
-# 📦 VaultZero — Official APK Releases & Download Center
+# 📦 VaultZero — Official APK Releases & Verification Center
 
-Welcome to the official **VaultZero** APK distribution directory. The R8-minified, signed Android package (`.apk`, **2.04 MB**) is stored directly in this directory (`releases/VaultZero-v1.0.0.apk`) alongside its portable Base64 text mirror (`releases/VaultZero-v1.0.0.apk.base64`).
+Welcome to the official **VaultZero** release documentation directory. To keep the Git source tree 100% clean of binary blobs for **F-Droid** and **IzzyOnDroid** compliance, compiled `.apk` packages are distributed exclusively through [**GitHub Releases**](https://github.com/ChrisDesarden/Vault-Zero/releases).
 
 ---
 
@@ -8,11 +8,10 @@ Welcome to the official **VaultZero** APK distribution directory. The R8-minifie
 
 | Asset / Page | File / Link | Size | Description |
 | :--- | :--- | :--- | :--- |
-| **📱 Direct Android APK Binary** | [**⬇️ Download `VaultZero-v1.0.0.apk`**](VaultZero-v1.0.0.apk?raw=true) | `2.04 MB` (`2,137,846 bytes`) | Signed, R8-shrunk installable APK for Android 7.0+ (`API 24+`) |
-| **🚀 GitHub Releases Asset** | [**⬇️ Download from GitHub Releases (`v1.0.0`)**](../../releases/latest/download/VaultZero-v1.0.0.apk) | `2.04 MB` | Published automatically by GitHub Actions on push |
-| **📄 Base64 Text Mirror** | [**📄 View `VaultZero-v1.0.0.apk.base64`**](VaultZero-v1.0.0.apk.base64) | `2.72 MB` | Text-encoded APK mirror (`base64 -d VaultZero-v1.0.0.apk.base64 > VaultZero-v1.0.0.apk`) |
+| **🚀 Direct APK Download (GitHub Releases)** | [**⬇️ Download `VaultZero-v1.0.0.apk`**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest/download/VaultZero-v1.0.0.apk) | `2.04 MB` (`2,137,846 bytes`) | Signed, R8-shrunk installable APK for Android 7.0+ (`API 24+`) |
+| **📦 All Release Assets (`v1.0.0`)** | [**Open GitHub Releases (`v1.0.0`)**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest) | — | Official GitHub Release page with APK and checksum assets |
 | **🔐 SHA-256 Checksum File** | [**`VaultZero-v1.0.0.apk.sha256`**](VaultZero-v1.0.0.apk.sha256) | `87 B` | Official SHA-256 cryptographic digest file |
-| **📋 v1.0.0 Release Notes** | [**View `v1.0.0` Release Notes (`v1.0.0.md`)**](v1.0.0.md) | `2.8 KB` | Full changelog, cryptographic parameters, and verification guide |
+| **📋 v1.0.0 Release Notes** | [**View `v1.0.0` Release Notes (`v1.0.0.md`)**](v1.0.0.md) | `2.5 KB` | Full changelog, cryptographic parameters, and verification guide |
 | **🌐 Web Download Portal** | [**Open HTML Download Page (`../docs/index.html`)**](../docs/index.html) | `6.1 KB` | Standalone HTML download portal for GitHub Pages / browsers |
 
 ---
@@ -53,7 +52,7 @@ apksigner verify --print-certs VaultZero-v1.0.0.apk
 
 ## 📲 How to Install on Android
 
-1. Tap [**⬇️ Download `VaultZero-v1.0.0.apk`**](VaultZero-v1.0.0.apk?raw=true) above (or click the **Download raw file** button if viewing `VaultZero-v1.0.0.apk` in the GitHub file viewer).
+1. Tap [**⬇️ Download `VaultZero-v1.0.0.apk`**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest/download/VaultZero-v1.0.0.apk) above.
 2. Open the downloaded `VaultZero-v1.0.0.apk` file on your Android device.
 3. If prompted by Android, enable **Allow from this source** for your browser or file manager.
 4. Tap **Install** and launch **VaultZero**.

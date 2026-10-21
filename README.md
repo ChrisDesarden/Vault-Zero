@@ -12,24 +12,23 @@
 
 ## 📲 Download & Easy APK Installation
 
-Get **VaultZero** running on your Android device in under a minute. The compiled, R8-optimized signed APK binary (`2.04 MB`) is included directly in this repository under [`/releases`](releases/README.md) (`releases/VaultZero-v1.0.0.apk`) and is also published automatically to GitHub Releases by GitHub Actions ([`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml)).
+Get **VaultZero** running on your Android device in under a minute. Pre-built, R8-optimized signed APK binaries (`2.04 MB`) are published on [**GitHub Releases**](https://github.com/ChrisDesarden/Vault-Zero/releases) (automatically built and attached via [`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml), keeping the Git source tree 100% free of binary blobs for **F-Droid** compliance).
 
 ### Direct APK Download & Release Pages
 
 | Release Channel | Version | Size | Minimum Android | Direct Link |
 | :--- | :--- | :--- | :--- | :--- |
-| **Releases & Download Center** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**📦 Open Releases & Download Center (`releases/README.md`)**](releases/README.md) |
-| **Latest Installable APK (Repo)** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**⬇️ Download `VaultZero-v1.0.0.apk`**](releases/VaultZero-v1.0.0.apk?raw=true) |
-| **Latest Installable APK (Releases)** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**🚀 Download from GitHub Releases (`v1.0.0`)**](../../releases/latest/download/VaultZero-v1.0.0.apk) |
-| **v1.0.0 Release Notes & Spec** | `v1.0.0` | — | Android 7.0+ (API 24+) | [**📋 View `v1.0.0` Release Notes (`releases/v1.0.0.md`)**](releases/v1.0.0.md) |
+| **Latest Installable APK (GitHub Releases)** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**🚀 Download `VaultZero-v1.0.0.apk`**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest/download/VaultZero-v1.0.0.apk) |
+| **GitHub Releases Page (`v1.0.0`)** | `v1.0.0` | `2.04 MB` | Android 7.0+ (API 24+) | [**📦 View All Assets on GitHub Releases**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest) |
+| **Releases & Verification Guide** | `v1.0.0` | — | Android 7.0+ (API 24+) | [**📋 Open Releases & Verification Center (`releases/README.md`)**](releases/README.md) |
+| **v1.0.0 Release Notes & Spec** | `v1.0.0` | — | Android 7.0+ (API 24+) | [**📄 View `v1.0.0` Release Notes (`releases/v1.0.0.md`)**](releases/v1.0.0.md) |
 | **SHA-256 Checksum File** | `v1.0.0` | `87 B` | All Platforms | [**🔐 View `VaultZero-v1.0.0.apk.sha256`**](releases/VaultZero-v1.0.0.apk.sha256) |
 | **Web Download Portal (HTML)** | `v1.0.0` | — | Browser / GitHub Pages | [**🌐 View Web Download Portal (`docs/index.html`)**](docs/index.html) |
 
 ### Step-by-Step Installation Guide (Android)
 
 1. **Download the APK**:
-   - Open the [**📦 Releases & Download Center**](releases/README.md) or tap [**⬇️ Download `VaultZero-v1.0.0.apk`**](releases/VaultZero-v1.0.0.apk?raw=true) directly on your Android phone or tablet.
-   - *(Note: After any changes in AI Studio, click **Save / Sync to GitHub** in AI Studio so the new `2.04 MB` `releases/VaultZero-v1.0.0.apk` binary and workflow are pushed to `ChrisDesarden/Vault-Zero`).*
+   - Tap [**🚀 Download `VaultZero-v1.0.0.apk`**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest/download/VaultZero-v1.0.0.apk) or visit the [**GitHub Releases page**](https://github.com/ChrisDesarden/Vault-Zero/releases/latest) directly on your Android phone or tablet.
 2. **Allow Installation from Browser/Files**:
    - Open the downloaded `VaultZero-v1.0.0.apk` file from your notification shade or **Files / Downloads** app.
    - If prompted with *"For your security, your phone currently isn't allowed to install unknown apps from this source"*, tap **Settings** and toggle on **Allow from this source**.
