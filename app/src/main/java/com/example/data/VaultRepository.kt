@@ -121,8 +121,7 @@ class VaultRepository(
      * Returns Pair(recoveryPhrase, vmkHex)
      */
     suspend fun setupMasterPassword(
-        password: String,
-        seedDemoItems: Boolean = true
+        password: String
     ): Pair<String, String> = withContext(Dispatchers.Default) {
         val cleanPassword = password.trim()
         require(cleanPassword.length >= 8) { "Master Password must be at least 8 characters" }
@@ -170,10 +169,6 @@ class VaultRepository(
         activeSecretKey = vmk
         resetRateLimiter()
 
-        if (seedDemoItems) {
-            seedInitialDemoItems()
-        }
-
         Pair(recoveryPhrase, vmkHex)
     }
 
@@ -189,8 +184,10 @@ class VaultRepository(
         try {
             val keyBytes = VaultCrypto.hexToBytes(vmkHex)
             if (keyBytes.size == VaultCrypto.KEY_LENGTH_BYTES) {
-                activeSecretKey = SecretKeySpec(keyBytes, "AES")
+                val vmk = SecretKeySpec(keyBytes, "AES")
+                activeSecretKey = vmk
                 resetRateLimiter()
+                purgeLegacyDemoItemsIfPresent(vmk)
                 true
             } else {
                 false
@@ -253,6 +250,7 @@ class VaultRepository(
                                 prefs.encryptedRecoveryPhrase = VaultCrypto.encrypt(legacyPhrase, vmk)
                                 prefs.clearLegacyPlaintextRecoveryPhrase()
                             }
+                            purgeLegacyDemoItemsIfPresent(vmk)
                             return@withContext true
                         }
                     } catch (e: Exception) {
@@ -261,6 +259,7 @@ class VaultRepository(
                 } else {
                     activeSecretKey = passwordKey
                     resetRateLimiter()
+                    purgeLegacyDemoItemsIfPresent(passwordKey)
                     return@withContext true
                 }
             }
@@ -330,6 +329,7 @@ class VaultRepository(
 
             activeSecretKey = vmk
             resetRateLimiter()
+            purgeLegacyDemoItemsIfPresent(vmk)
             true
         } catch (e: Exception) {
             false
@@ -611,105 +611,30 @@ class VaultRepository(
         importedCount
     }
 
-    private suspend fun seedInitialDemoItems() {
-        val key = activeSecretKey ?: return
+    private suspend fun purgeLegacyDemoItemsIfPresent(key: SecretKey) {
+        try {
+            val entities = dao.getAllList()
+            for (entity in entities) {
+                val item = try {
+                    decryptRecordEntity(entity, key)
+                } catch (e: Exception) {
+                    null
+                } ?: continue
 
-        val demoItems = listOf(
-            VaultItem(
-                id = UUID.randomUUID().toString(),
-                title = "GitHub Developer Account",
-                type = VaultType.LOGIN,
-                category = "Work",
-                isFavorite = true,
-                tags = listOf("code", "git", "work"),
-                payload = LoginPayload(
-                    username = "chris.desarden",
-                    password = "g!t_V@ultZ3r0#2026_SecureKey",
-                    url = "https://github.com/ChrisDesarden/vaultzero",
-                    totpSecret = "JBSWY3DPEHPK3PXP",
-                    notes = "Primary zero-knowledge code repository access"
-                )
-            ),
-            VaultItem(
-                id = UUID.randomUUID().toString(),
-                title = "AWS Production Root API",
-                type = VaultType.API_SECRET,
-                category = "Cloud",
-                isFavorite = true,
-                tags = listOf("aws", "cloud", "production"),
-                payload = ApiSecretPayload(
-                    serviceName = "Amazon Web Services",
-                    apiKey = "AKIAIOSFODNN7EXAMPLE",
-                    secretToken = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-                    environment = "Production",
-                    scopes = "AdministratorAccess, KMSFullAccess",
-                    endpointUrl = "https://aws.amazon.com",
-                    notes = "Requires Hardware MFA token for rotation"
-                )
-            ),
-            VaultItem(
-                id = UUID.randomUUID().toString(),
-                title = "Ethereum Cold Storage Wallet",
-                type = VaultType.CRYPTO_WALLET,
-                category = "Crypto",
-                isFavorite = true,
-                tags = listOf("eth", "web3", "cold-storage"),
-                payload = CryptoPayload(
-                    walletName = "VaultZero Sovereign Wallet",
-                    network = "Ethereum (Mainnet)",
-                    publicAddress = "0x71C...8494",
-                    seedPhrase = "alpha beacon cipher matrix orbit plasma silver timber haven nova quartz zenith",
-                    privateKey = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d",
-                    derivationPath = "m/44'/60'/0'/0/0",
-                    notes = "Backed up in stainless steel safe deposit plate"
-                )
-            ),
-            VaultItem(
-                id = UUID.randomUUID().toString(),
-                title = "Titanium Corporate Visa",
-                type = VaultType.CARD,
-                category = "Finance",
-                isFavorite = false,
-                tags = listOf("finance", "corporate", "card"),
-                payload = CardPayload(
-                    cardholderName = "CHRISTOPHER DESARDEN",
-                    cardNumber = "4532 8812 9014 3829",
-                    expMonth = "08",
-                    expYear = "29",
-                    cvv = "842",
-                    pin = "9201",
-                    brand = "Visa Infinite",
-                    notes = "Tap to pay enabled, 100k daily limit"
-                )
-            ),
-            VaultItem(
-                id = UUID.randomUUID().toString(),
-                title = "Post-Quantum Security Protocol Notes",
-                type = VaultType.NOTE,
-                category = "Security",
-                isFavorite = true,
-                tags = listOf("specs", "encryption", "docs"),
-                payload = NotePayload(
-                    content = "VaultZero Architecture:\n- AES-256-GCM symmetric payload & metadata authenticated encryption\n- Per-record GCM Additional Authenticated Data (AAD) row binding\n- PBKDF2WithHmacSHA256 (100,000 rounds) key derivation\n- SHA-256 checksummed 12-word recovery mnemonic.",
-                    isPinned = true
-                )
-            )
-        )
-
-        for (item in demoItems) {
-            val encEnvelope = encryptRecordEnvelope(item, item.id, key)
-            val entity = VaultItemEntity(
-                id = item.id,
-                title = REDACTED_TITLE,
-                type = item.type.name,
-                category = REDACTED_CATEGORY,
-                encryptedPayload = encEnvelope,
-                isFavorite = item.isFavorite,
-                createdAt = item.createdAt,
-                updatedAt = item.updatedAt,
-                tagsJson = REDACTED_TAGS_JSON
-            )
-            dao.insertOrUpdate(entity)
+                val isLegacyDemo = when (val p = item.payload) {
+                    is LoginPayload -> item.title == "GitHub Developer Account" && p.password == "g!t_V@ultZ3r0#2026_SecureKey"
+                    is ApiSecretPayload -> item.title == "AWS Production Root API" && p.apiKey == "AKIAIOSFODNN7EXAMPLE"
+                    is CryptoPayload -> item.title == "Ethereum Cold Storage Wallet" && p.publicAddress == "0x71C...8494"
+                    is CardPayload -> item.title == "Titanium Corporate Visa" && p.cardNumber == "4532 8812 9014 3829"
+                    is NotePayload -> item.title == "Post-Quantum Security Protocol Notes" && p.content.startsWith("VaultZero Architecture:")
+                    else -> false
+                }
+                if (isLegacyDemo) {
+                    dao.deleteById(entity.id)
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore cleanup errors
         }
     }
 

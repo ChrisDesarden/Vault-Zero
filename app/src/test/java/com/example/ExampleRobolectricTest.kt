@@ -130,6 +130,8 @@ class ExampleRobolectricTest {
         assertTrue(repository.isUnlocked)
         assertEquals(12, recoveryPhrase.split(" ").size)
         assertEquals(64, vmkHex.length)
+        // Verify newly initialized vault starts completely empty with zero pre-seeded items
+        assertTrue(repository.getVaultItemsFlow().first().isEmpty())
 
         // Verify plaintext recovery phrase is NEVER persisted in SharedPreferences
         assertEquals("", prefs.legacyPlaintextRecoveryPhrase)
@@ -169,7 +171,7 @@ class ExampleRobolectricTest {
     @Test
     fun `emergency recovery kit restores original vault and preserves all encrypted records`() = runBlocking {
         val originalPass = "OriginalMasterPass99!"
-        val (recoveryPhrase, originalVmkHex) = repository.setupMasterPassword(originalPass, seedDemoItems = false)
+        val (recoveryPhrase, originalVmkHex) = repository.setupMasterPassword(originalPass)
         val originalFingerprint = repository.keyFingerprint
 
         // Save a custom secret item under the original VMK
@@ -209,7 +211,7 @@ class ExampleRobolectricTest {
 
     @Test
     fun `all six vault categories crud field preservation and sqlite encryption at rest`() = runBlocking {
-        repository.setupMasterPassword("CategoryAuditPass!2026", seedDemoItems = false)
+        repository.setupMasterPassword("CategoryAuditPass!2026")
 
         val testItems = listOf(
             VaultItem(
@@ -322,30 +324,50 @@ class ExampleRobolectricTest {
     @Test
     fun `encrypted backup export and cross-vault import roundtrip`() = runBlocking {
         val passA = "VaultAPassword123!"
-        repository.setupMasterPassword(passA, seedDemoItems = true)
-        val initialItems = repository.getVaultItemsFlow().first()
-        assertEquals(5, initialItems.size)
+        repository.setupMasterPassword(passA)
+        // Fresh vault must start empty
+        assertTrue(repository.getVaultItemsFlow().first().isEmpty())
+
+        // Add custom user records to Vault A
+        repository.saveItem(
+            VaultItem(
+                id = "backup-1",
+                title = "Personal Production Server",
+                type = VaultType.LOGIN,
+                category = "Work",
+                payload = LoginPayload(username = "admin", password = "UserCreatedSecret#2026")
+            )
+        )
+        repository.saveItem(
+            VaultItem(
+                id = "backup-2",
+                title = "Cloud KMS Root Token",
+                type = VaultType.API_SECRET,
+                category = "Cloud",
+                payload = ApiSecretPayload(serviceName = "KMS", apiKey = "kms_live_key_999")
+            )
+        )
+        assertEquals(2, repository.getVaultItemsFlow().first().size)
 
         val backupJson = repository.exportEncryptedBackup()
         assertTrue(backupJson.contains("VaultZero_Encrypted_Envelope"))
         // Verify neither secret passwords nor record titles/categories/tags leak in the exported backup JSON
-        assertFalse(backupJson.contains("g!t_V@ultZ3r0#2026_SecureKey"))
-        assertFalse(backupJson.contains("GitHub Developer Account"))
-        assertFalse(backupJson.contains("AWS Production Root API"))
-        assertFalse(backupJson.contains("Ethereum Cold Storage Wallet"))
+        assertFalse(backupJson.contains("UserCreatedSecret#2026"))
+        assertFalse(backupJson.contains("Personal Production Server"))
+        assertFalse(backupJson.contains("Cloud KMS Root Token"))
 
         // Wipe vault completely and initialize a brand-new Vault B with a different Master Password & VMK
         repository.clearVault()
         val passB = "VaultBDifferentPassword999!"
-        repository.setupMasterPassword(passB, seedDemoItems = false)
+        repository.setupMasterPassword(passB)
         assertTrue(repository.getVaultItemsFlow().first().isEmpty())
 
-        // Importing Vault A's backup into Vault B using Vault A's password unwraps and re-encrypts all 5 records
+        // Importing Vault A's backup into Vault B using Vault A's password unwraps and re-encrypts all records
         val importedCount = repository.importEncryptedBackup(backupJson, backupPassword = passA)
-        assertEquals(5, importedCount)
+        assertEquals(2, importedCount)
         val restoredItems = repository.getVaultItemsFlow().first()
-        assertEquals(5, restoredItems.size)
-        assertTrue(restoredItems.any { it.title == "GitHub Developer Account" && it.category == "Work" })
+        assertEquals(2, restoredItems.size)
+        assertTrue(restoredItems.any { it.title == "Personal Production Server" && it.category == "Work" })
     }
 
     @Test
