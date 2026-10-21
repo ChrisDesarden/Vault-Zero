@@ -1,6 +1,6 @@
 # 📦 VaultZero — Official APK Releases & Download Center
 
-Welcome to the official **VaultZero** APK distribution directory. The compiled, signed Android package (`.apk`) is stored directly in this directory so you can download and install it immediately from GitHub on any Android 7.0+ device.
+Welcome to the official **VaultZero** APK distribution directory. The compiled, signed Android package (`.apk`) is stored directly in this directory (`releases/VaultZero-v1.0.0.apk`) and automatically published via GitHub Actions so you can download and install it on any Android 7.0+ device.
 
 ---
 
@@ -11,18 +11,21 @@ Welcome to the official **VaultZero** APK distribution directory. The compiled, 
 | **File Name** | [`VaultZero-v1.0.0.apk`](VaultZero-v1.0.0.apk?raw=true) |
 | **Application ID** | `com.aistudio.vaultzero.secvlt` |
 | **Version** | `1.0.0` (`versionCode = 1`) |
-| **File Size** | `23.28 MB` (`24,407,112 bytes`) |
+| **File Size** | `10.88 MB` (`11,406,719 bytes`) |
 | **Minimum Android Version** | Android 7.0 Nougat (`API 24+`) |
 | **Target Android SDK** | Android 16 (`API 36`) |
 | **Network Permissions** | **None (`ZERO INTERNET PERMISSIONS`)** — 100% Air-Gapped Offline |
-| **SHA-256 Checksum** | `107ccffb4acf0cf8f6bf59d1499fb65a98c6cbc7b6d8a906c7d439facf627a8d` |
+| **SHA-256 Checksum** | `f5d71021932c4774c88ae0b9a3233f53a72ca58d8bdb6e567608d9d971b35ae3` |
 
 ### 🚀 Direct Download Links
 
-- **[⬇️ Download `VaultZero-v1.0.0.apk` (Direct Raw Binary — 23.28 MB)](VaultZero-v1.0.0.apk?raw=true)**
-- **[📄 View APK File Page on GitHub](VaultZero-v1.0.0.apk)**
-- **[🔐 Download SHA-256 Checksum File (`VaultZero-v1.0.0.apk.sha256`)](VaultZero-v1.0.0.apk.sha256?raw=true)**
-- **[📋 Read Full v1.0.0 Release Notes & Security Audit](v1.0.0.md)**
+- **[⬇️ Download `VaultZero-v1.0.0.apk` (Direct Raw Binary — 10.88 MB)](VaultZero-v1.0.0.apk?raw=true)**
+- **[📄 View APK File Page in Repository (`releases/VaultZero-v1.0.0.apk`)](VaultZero-v1.0.0.apk)**
+- **[🔐 View / Download SHA-256 Checksum (`VaultZero-v1.0.0.apk.sha256`)](VaultZero-v1.0.0.apk.sha256)**
+- **[📋 Read Full v1.0.0 Release Notes & Security Audit (`v1.0.0.md`)](v1.0.0.md)**
+
+> **Note if you just pushed this repository to GitHub:**
+> If GitHub's web uploader skipped binary `.apk` files during the initial push, the included GitHub Actions workflow ([`.github/workflows/release-apk.yml`](../.github/workflows/release-apk.yml)) automatically runs on push, builds `VaultZero-v1.0.0.apk`, commits it directly into `/releases/VaultZero-v1.0.0.apk`, and publishes the `v1.0.0` GitHub Release. You can check its progress under the **Actions** tab of your GitHub repository.
 
 ---
 
@@ -47,7 +50,7 @@ Always verify the SHA-256 hash of downloaded security software before installing
 
 ### Expected SHA-256 Digest
 ```text
-107ccffb4acf0cf8f6bf59d1499fb65a98c6cbc7b6d8a906c7d439facf627a8d  VaultZero-v1.0.0.apk
+f5d71021932c4774c88ae0b9a3233f53a72ca58d8bdb6e567608d9d971b35ae3  VaultZero-v1.0.0.apk
 ```
 
 ### Verify via Terminal
@@ -80,7 +83,7 @@ Expected permissions output:
 
 | Version | Release Date | APK Binary | Checksum | Release Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **`v1.0.0`** | 2026-10-20 | [`VaultZero-v1.0.0.apk`](VaultZero-v1.0.0.apk?raw=true) | [`SHA-256`](VaultZero-v1.0.0.apk.sha256?raw=true) | [`v1.0.0.md`](v1.0.0.md) |
+| **`v1.0.0`** | 2026-10-20 | [`VaultZero-v1.0.0.apk` (10.88 MB)](VaultZero-v1.0.0.apk?raw=true) | [`SHA-256`](VaultZero-v1.0.0.apk.sha256) | [`v1.0.0.md`](v1.0.0.md) |
 
 ---
 
