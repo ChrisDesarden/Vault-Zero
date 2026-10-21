@@ -1,8 +1,6 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -31,7 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.crypto.VaultCrypto
@@ -59,9 +54,7 @@ import com.example.model.VaultItem
 import com.example.model.VaultType
 import com.example.ui.components.StrengthMeter
 import com.example.ui.components.VaultTypeIcon
-import com.example.ui.theme.CyberCyan
 import com.example.ui.theme.CyberEmerald
-import com.example.ui.theme.JetBrainsMonoFamily
 
 @Composable
 fun ItemEditorDialog(
@@ -90,6 +83,7 @@ fun ItemEditorDialog(
     var cvv by remember { mutableStateOf(cardPayload.cvv) }
     var pin by remember { mutableStateOf(cardPayload.pin) }
     var brand by remember { mutableStateOf(cardPayload.brand) }
+    var cardNotes by remember { mutableStateOf(cardPayload.notes) }
 
     // API state
     val apiPayload = (item.payload as? ApiSecretPayload) ?: ApiSecretPayload()
@@ -97,6 +91,9 @@ fun ItemEditorDialog(
     var apiKey by remember { mutableStateOf(apiPayload.apiKey) }
     var secretToken by remember { mutableStateOf(apiPayload.secretToken) }
     var environment by remember { mutableStateOf(apiPayload.environment) }
+    var scopes by remember { mutableStateOf(apiPayload.scopes) }
+    var endpointUrl by remember { mutableStateOf(apiPayload.endpointUrl) }
+    var apiNotes by remember { mutableStateOf(apiPayload.notes) }
 
     // Crypto state
     val cryptoPayload = (item.payload as? CryptoPayload) ?: CryptoPayload()
@@ -105,16 +102,22 @@ fun ItemEditorDialog(
     var publicAddress by remember { mutableStateOf(cryptoPayload.publicAddress) }
     var seedPhrase by remember { mutableStateOf(cryptoPayload.seedPhrase) }
     var privateKey by remember { mutableStateOf(cryptoPayload.privateKey) }
+    var derivationPath by remember { mutableStateOf(cryptoPayload.derivationPath) }
+    var cryptoNotes by remember { mutableStateOf(cryptoPayload.notes) }
 
     // Note state
     val notePayload = (item.payload as? NotePayload) ?: NotePayload()
     var noteContent by remember { mutableStateOf(notePayload.content) }
+    val isPinned by remember { mutableStateOf(notePayload.isPinned) }
 
     // Identity state
     val idPayload = (item.payload as? IdentityPayload) ?: IdentityPayload()
     var fullName by remember { mutableStateOf(idPayload.fullName) }
     var idType by remember { mutableStateOf(idPayload.idType) }
     var idNumber by remember { mutableStateOf(idPayload.idNumber) }
+    var birthDate by remember { mutableStateOf(idPayload.birthDate) }
+    var expiryDate by remember { mutableStateOf(idPayload.expiryDate) }
+    var idNotes by remember { mutableStateOf(idPayload.notes) }
 
     val strength = remember(password) { VaultCrypto.calculateStrength(password) }
 
@@ -201,7 +204,7 @@ fun ItemEditorDialog(
                             onValueChange = { username = it },
                             label = { Text("Username or Email") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("editor_username_input"),
                             shape = RoundedCornerShape(12.dp)
                         )
 
@@ -324,11 +327,29 @@ fun ItemEditorDialog(
                             )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedTextField(
+                                value = pin,
+                                onValueChange = { pin = it },
+                                label = { Text("ATM PIN (Optional)") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            OutlinedTextField(
+                                value = brand,
+                                onValueChange = { brand = it },
+                                label = { Text("Card Network / Brand") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
                         OutlinedTextField(
-                            value = pin,
-                            onValueChange = { pin = it },
-                            label = { Text("ATM PIN (Optional)") },
-                            singleLine = true,
+                            value = cardNotes,
+                            onValueChange = { cardNotes = it },
+                            label = { Text("Card Notes (Optional)") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -369,6 +390,32 @@ fun ItemEditorDialog(
                             label = { Text("Environment") },
                             placeholder = { Text("Production / Staging / Dev") },
                             singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = scopes,
+                            onValueChange = { scopes = it },
+                            label = { Text("Scopes / Permissions (Optional)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = endpointUrl,
+                            onValueChange = { endpointUrl = it },
+                            label = { Text("Endpoint URL (Optional)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = apiNotes,
+                            onValueChange = { apiNotes = it },
+                            label = { Text("Notes (Optional)") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -421,6 +468,23 @@ fun ItemEditorDialog(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = derivationPath,
+                            onValueChange = { derivationPath = it },
+                            label = { Text("Derivation Path (Optional)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = cryptoNotes,
+                            onValueChange = { cryptoNotes = it },
+                            label = { Text("Notes (Optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
 
                     VaultType.NOTE -> {
@@ -428,7 +492,7 @@ fun ItemEditorDialog(
                             value = noteContent,
                             onValueChange = { noteContent = it },
                             label = { Text("Secure Note (AES-256 Encrypted)") },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("editor_note_input"),
                             shape = RoundedCornerShape(12.dp),
                             minLines = 6
                         )
@@ -459,6 +523,33 @@ fun ItemEditorDialog(
                             onValueChange = { idNumber = it },
                             label = { Text("Document / License Number") },
                             singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedTextField(
+                                value = birthDate,
+                                onValueChange = { birthDate = it },
+                                label = { Text("Birth Date (Optional)") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            OutlinedTextField(
+                                value = expiryDate,
+                                onValueChange = { expiryDate = it },
+                                label = { Text("Expiry Date (Optional)") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = idNotes,
+                            onValueChange = { idNotes = it },
+                            label = { Text("Notes (Optional)") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -495,11 +586,11 @@ fun ItemEditorDialog(
 
                             val newPayload = when (item.type) {
                                 VaultType.LOGIN -> LoginPayload(username, password, url, totpSecret, notes)
-                                VaultType.CARD -> CardPayload(cardholderName, cardNumber, expMonth, expYear, cvv, pin, brand)
-                                VaultType.API_SECRET -> ApiSecretPayload(serviceName, apiKey, secretToken, environment)
-                                VaultType.CRYPTO_WALLET -> CryptoPayload(walletName, network, publicAddress, seedPhrase, privateKey)
-                                VaultType.NOTE -> NotePayload(noteContent)
-                                VaultType.IDENTITY -> IdentityPayload(fullName, idType, idNumber)
+                                VaultType.CARD -> CardPayload(cardholderName, cardNumber, expMonth, expYear, cvv, pin, brand, cardNotes)
+                                VaultType.API_SECRET -> ApiSecretPayload(serviceName, apiKey, secretToken, environment, scopes, endpointUrl, apiNotes)
+                                VaultType.CRYPTO_WALLET -> CryptoPayload(walletName, network, publicAddress, seedPhrase, privateKey, derivationPath, cryptoNotes)
+                                VaultType.NOTE -> NotePayload(noteContent, isPinned)
+                                VaultType.IDENTITY -> IdentityPayload(fullName, idType, idNumber, birthDate, expiryDate, idNotes)
                             }
 
                             val updatedItem = item.copy(

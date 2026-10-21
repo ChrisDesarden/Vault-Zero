@@ -4,6 +4,9 @@ import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
+import android.os.PersistableBundle
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.crypto.BiometricKeyManager
@@ -12,9 +15,11 @@ import com.example.crypto.VaultCrypto
 import com.example.data.VaultDatabase
 import com.example.data.VaultPreferences
 import com.example.data.VaultRepository
+import com.example.model.ApiSecretPayload
 import com.example.model.AuditReport
 import com.example.model.CardPayload
 import com.example.model.CryptoPayload
+import com.example.model.IdentityPayload
 import com.example.model.ItemPayload
 import com.example.model.LoginPayload
 import com.example.model.NotePayload
@@ -22,7 +27,9 @@ import com.example.model.VaultItem
 import com.example.model.VaultType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +37,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 enum class VaultLockState {
     NEEDS_SETUP,
@@ -96,8 +102,8 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     private val _isAuthenticating = MutableStateFlow(false)
     val isAuthenticating: StateFlow<Boolean> = _isAuthenticating.asStateFlow()
 
-    private val _biometricPromptEvent = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val biometricPromptEvent: kotlinx.coroutines.flow.SharedFlow<Unit> = _biometricPromptEvent
+    private val _biometricPromptEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val biometricPromptEvent: SharedFlow<Unit> = _biometricPromptEvent
 
     private val _generatorConfig = MutableStateFlow(GeneratorConfig())
     val generatorConfig: StateFlow<GeneratorConfig> = _generatorConfig.asStateFlow()
@@ -116,6 +122,12 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private var clipboardJob: Job? = null
     private var autoLockJob: Job? = null
+
+    @Volatile
+    private var lastInteractionRealtime: Long = SystemClock.elapsedRealtime()
+
+    @Volatile
+    private var lastCopiedSensitiveValue: String? = null
 
     init {
         val database = VaultDatabase.getInstance(application)
@@ -136,7 +148,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         get() = repository.keyFingerprint
 
     val recoveryPhrase: String
-        get() = repository.recoveryPhrase
+        get() = repository.getDecryptedRecoveryPhrase()
 
     val autoLockSeconds: Int
         get() = repository.autoLockSeconds
@@ -159,11 +171,32 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         _selectedTypeFilter,
         _favoritesOnly
     ) { items, query, typeFilter, favsOnly ->
+        val cleanQuery = query.trim()
         items.filter { item ->
-            val matchesQuery = if (query.isBlank()) true else {
-                item.title.contains(query, ignoreCase = true) ||
-                        item.category.contains(query, ignoreCase = true) ||
-                        item.tags.any { it.contains(query, ignoreCase = true) }
+            val matchesQuery = if (cleanQuery.isEmpty()) true else {
+                val payloadMatch = when (val p = item.payload) {
+                    is LoginPayload -> p.username.contains(cleanQuery, ignoreCase = true) ||
+                            p.url.contains(cleanQuery, ignoreCase = true) ||
+                            p.notes.contains(cleanQuery, ignoreCase = true)
+                    is CardPayload -> p.cardholderName.contains(cleanQuery, ignoreCase = true) ||
+                            p.brand.contains(cleanQuery, ignoreCase = true) ||
+                            p.cardNumber.takeLast(4).contains(cleanQuery, ignoreCase = true) ||
+                            p.notes.contains(cleanQuery, ignoreCase = true)
+                    is ApiSecretPayload -> p.serviceName.contains(cleanQuery, ignoreCase = true) ||
+                            p.environment.contains(cleanQuery, ignoreCase = true) ||
+                            p.scopes.contains(cleanQuery, ignoreCase = true) ||
+                            p.endpointUrl.contains(cleanQuery, ignoreCase = true)
+                    is CryptoPayload -> p.walletName.contains(cleanQuery, ignoreCase = true) ||
+                            p.network.contains(cleanQuery, ignoreCase = true) ||
+                            p.publicAddress.contains(cleanQuery, ignoreCase = true)
+                    is NotePayload -> p.content.contains(cleanQuery, ignoreCase = true)
+                    is IdentityPayload -> p.fullName.contains(cleanQuery, ignoreCase = true) ||
+                            p.idType.contains(cleanQuery, ignoreCase = true)
+                }
+                item.title.contains(cleanQuery, ignoreCase = true) ||
+                        item.category.contains(cleanQuery, ignoreCase = true) ||
+                        item.tags.any { it.contains(cleanQuery, ignoreCase = true) } ||
+                        payloadMatch
             }
             val matchesType = typeFilter == null || item.type == typeFilter
             val matchesFav = !favsOnly || item.isFavorite
@@ -171,8 +204,8 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val auditReport: StateFlow<AuditReport> = allItems.combine(_clockTicker) { items, _ ->
-        SecurityAuditEngine.analyzeVault(items)
+    val auditReport: StateFlow<AuditReport> = allItems.combine(_clockTicker) { items, now ->
+        SecurityAuditEngine.analyzeVault(items, now)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -184,18 +217,32 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             while (isActive) {
                 delay(1000)
                 _clockTicker.value = System.currentTimeMillis()
+                checkAutoLockTimeout()
             }
         }
     }
 
     private fun resetAutoLockTimer() {
+        lastInteractionRealtime = SystemClock.elapsedRealtime()
         autoLockJob?.cancel()
         val seconds = repository.autoLockSeconds
         if (seconds > 0 && _lockState.value == VaultLockState.UNLOCKED) {
             autoLockJob = viewModelScope.launch {
                 delay(seconds * 1000L)
-                lockVault()
-                _clipboardStatus.value = "Vault auto-locked due to inactivity"
+                lockVault(autoLocked = true)
+            }
+        }
+    }
+
+    /**
+     * Checks monotonic elapsed time since last user interaction and locks vault if timeout elapsed.
+     * Safe against wall-clock tampering and device sleep/background pauses.
+     */
+    fun checkAutoLockTimeout(nowRealtime: Long = SystemClock.elapsedRealtime()) {
+        if (_lockState.value == VaultLockState.UNLOCKED) {
+            val seconds = repository.autoLockSeconds
+            if (seconds > 0 && (nowRealtime - lastInteractionRealtime) >= seconds * 1000L) {
+                lockVault(autoLocked = true)
             }
         }
     }
@@ -251,10 +298,16 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun unlockVault(password: String) {
-        if (password.isEmpty()) {
+        if (password.isBlank()) {
             _authError.value = "Please enter your Master Password"
             return
         }
+        val lockoutSec = repository.getRemainingLockoutSeconds()
+        if (lockoutSec > 0) {
+            _authError.value = "Too many failed attempts. Try again in ${lockoutSec}s."
+            return
+        }
+
         viewModelScope.launch {
             _isAuthenticating.value = true
             try {
@@ -270,7 +323,12 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                     _authError.value = null
                     resetAutoLockTimer()
                 } else {
-                    _authError.value = "Incorrect Master Password. Please check and try again."
+                    val newLockoutSec = repository.getRemainingLockoutSeconds()
+                    if (newLockoutSec > 0) {
+                        _authError.value = "Too many failed attempts. Locked out for ${newLockoutSec}s."
+                    } else {
+                        _authError.value = "Incorrect Master Password. Please check and try again."
+                    }
                 }
             } catch (e: Exception) {
                 _authError.value = "Authentication error: ${e.message}"
@@ -293,11 +351,11 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         _biometricPromptEvent.tryEmit(Unit)
     }
 
-    fun onBiometricVerified() {
+    fun onBiometricVerified(authenticatedCipher: javax.crypto.Cipher? = null) {
         viewModelScope.launch {
             _isAuthenticating.value = true
             try {
-                val vmkHex = BiometricKeyManager.getDecryptedVmk(getApplication())
+                val vmkHex = BiometricKeyManager.decryptVmkWithCipher(getApplication(), authenticatedCipher)
                 if (vmkHex != null) {
                     val success = repository.unlockWithVmkHex(vmkHex)
                     if (success) {
@@ -321,8 +379,17 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun recoverVault(phrase: String, newPass: String, confirmPass: String) {
+        val cleanPhrase = VaultCrypto.normalizeRecoveryPhrase(phrase)
         val cleanNewPass = newPass.trim()
         val cleanConfirm = confirmPass.trim()
+        if (!VaultCrypto.validateRecoveryPhrase(cleanPhrase, enforceChecksum = false)) {
+            _authError.value = "Recovery phrase must be 12 valid words from your Emergency Recovery Kit"
+            return
+        }
+        if (!VaultCrypto.verifyRecoveryPhraseChecksum(cleanPhrase)) {
+            _authError.value = "Recovery phrase checksum mismatch — check for a mistyped word or wrong word order"
+            return
+        }
         if (cleanNewPass.length < 8) {
             _authError.value = "New password must be at least 8 characters"
             return
@@ -335,7 +402,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isAuthenticating.value = true
             try {
-                val success = repository.recoverWithPhrase(phrase, cleanNewPass)
+                val success = repository.recoverWithPhrase(cleanPhrase, cleanNewPass)
                 if (success) {
                     if (repository.isBiometricEnabled()) {
                         val vmkHex = repository.getActiveVmkHex()
@@ -347,7 +414,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                     _authError.value = null
                     resetAutoLockTimer()
                 } else {
-                    _authError.value = "Invalid 12-word recovery phrase"
+                    _authError.value = "Recovery phrase does not match this vault"
                 }
             } catch (e: Exception) {
                 _authError.value = "Recovery error: ${e.message}"
@@ -357,18 +424,22 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     fun setLockState(state: VaultLockState) {
         _lockState.value = state
         _authError.value = null
     }
 
-    fun lockVault() {
+    fun lockVault(autoLocked: Boolean = false) {
         repository.lock()
         _lockState.value = VaultLockState.LOCKED
         _viewingItem.value = null
         _editingItem.value = null
+        _newRecoveryPhrase.value = null
         autoLockJob?.cancel()
+        clearSensitiveClipboardIfOwned()
+        if (autoLocked) {
+            _clipboardStatus.value = "Vault auto-locked due to inactivity"
+        }
     }
 
     fun dismissRecoveryPhraseModal() {
@@ -404,6 +475,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     // -------------------------------------------------------------------------
 
     fun viewItem(item: VaultItem) {
+        if (_lockState.value != VaultLockState.UNLOCKED) return
         _viewingItem.value = item
         onUserInteraction()
     }
@@ -413,14 +485,15 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         onUserInteraction()
     }
 
-    fun startCreateItem(type: VaultType = VaultType.LOGIN) {
+    fun startCreateItem(type: VaultType = VaultType.LOGIN, prefilledPassword: String = "") {
+        if (_lockState.value != VaultLockState.UNLOCKED) return
         val blankPayload: ItemPayload = when (type) {
-            VaultType.LOGIN -> LoginPayload()
+            VaultType.LOGIN -> LoginPayload(password = prefilledPassword)
             VaultType.CARD -> CardPayload()
-            VaultType.API_SECRET -> com.example.model.ApiSecretPayload()
+            VaultType.API_SECRET -> ApiSecretPayload(secretToken = prefilledPassword)
             VaultType.CRYPTO_WALLET -> CryptoPayload()
             VaultType.NOTE -> NotePayload()
-            VaultType.IDENTITY -> com.example.model.IdentityPayload()
+            VaultType.IDENTITY -> IdentityPayload()
         }
         _editingItem.value = VaultItem(
             id = "",
@@ -431,7 +504,13 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         onUserInteraction()
     }
 
+    fun saveGeneratedPasswordToVault() {
+        val currentGenerated = _generatedPassword.value
+        startCreateItem(type = VaultType.LOGIN, prefilledPassword = currentGenerated)
+    }
+
     fun startEditItem(item: VaultItem) {
+        if (_lockState.value != VaultLockState.UNLOCKED) return
         _viewingItem.value = null
         _editingItem.value = item
         onUserInteraction()
@@ -458,57 +537,143 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(item: VaultItem) {
         viewModelScope.launch {
-            repository.toggleFavorite(item.id, !item.isFavorite)
-            onUserInteraction()
+            try {
+                repository.toggleFavorite(item.id, !item.isFavorite)
+                onUserInteraction()
+            } catch (e: Exception) {
+                _clipboardStatus.value = "Cannot update favorite while locked"
+            }
         }
     }
 
     fun deleteItem(item: VaultItem) {
         viewModelScope.launch {
-            repository.deleteItem(item.id)
-            _viewingItem.value = null
-            _editingItem.value = null
-            _clipboardStatus.value = "Deleted '${item.title}'"
-            onUserInteraction()
+            try {
+                repository.deleteItem(item.id)
+                _viewingItem.value = null
+                _editingItem.value = null
+                _clipboardStatus.value = "Deleted '${item.title}'"
+                onUserInteraction()
+            } catch (e: Exception) {
+                _clipboardStatus.value = "Failed to delete: ${e.message}"
+            }
         }
     }
 
     fun clearVault() {
         viewModelScope.launch {
             BiometricKeyManager.clearBiometricKey(getApplication())
+            clearSensitiveClipboardIfOwned()
             repository.clearVault()
             _lockState.value = VaultLockState.NEEDS_SETUP
             _viewingItem.value = null
             _editingItem.value = null
+            _newRecoveryPhrase.value = null
             _clipboardStatus.value = "Vault completely reset"
         }
     }
 
     // -------------------------------------------------------------------------
-    // Secure Clipboard with Auto-Clear Timer
+    // Encrypted Backup Export & Import
+    // -------------------------------------------------------------------------
+
+    fun exportBackupJson(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = repository.exportEncryptedBackup()
+                onResult(json)
+                onUserInteraction()
+            } catch (e: Exception) {
+                _clipboardStatus.value = "Export failed: ${e.message}"
+            }
+        }
+    }
+
+    fun importBackupJson(json: String, backupPassword: String? = null) {
+        viewModelScope.launch {
+            try {
+                val count = repository.importEncryptedBackup(json, backupPassword)
+                _clipboardStatus.value = if (count > 0) {
+                    "Restored $count encrypted ${if (count == 1) "entry" else "entries"}"
+                } else {
+                    "No compatible records found (verify backup password or format)"
+                }
+                onUserInteraction()
+            } catch (e: Exception) {
+                _clipboardStatus.value = "Import failed: invalid backup JSON format"
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Secure Clipboard with Ownership-Aware Auto-Clear & Sensitive Flag
     // -------------------------------------------------------------------------
 
     fun copySecurely(label: String, value: String, isSensitive: Boolean = true) {
         if (value.isEmpty()) return
         val clip = ClipData.newPlainText(label, value)
+        if (isSensitive) {
+            try {
+                val extras = PersistableBundle().apply {
+                    putBoolean("android.content.extra.IS_SENSITIVE", true)
+                }
+                clip.description.extras = extras
+            } catch (e: Exception) {
+                // Ignore on older unit test mocks where PersistableBundle is stubbed
+            }
+        }
         clipboardManager.setPrimaryClip(clip)
 
         val timeout = repository.clipboardTimeoutSeconds
-        _clipboardStatus.value = "$label copied! Auto-clearing in ${timeout}s"
+        _clipboardStatus.value = if (isSensitive && timeout > 0) {
+            "$label copied! Auto-clearing in ${timeout}s"
+        } else {
+            "$label copied to clipboard"
+        }
         onUserInteraction()
 
         clipboardJob?.cancel()
-        if (isSensitive && timeout > 0) {
-            clipboardJob = viewModelScope.launch {
-                delay(timeout * 1000L)
-                try {
-                    val emptyClip = ClipData.newPlainText("", "")
-                    clipboardManager.setPrimaryClip(emptyClip)
-                    _clipboardStatus.value = "Clipboard cleared for security"
-                } catch (e: Exception) {
-                    // ignore
+        if (isSensitive) {
+            lastCopiedSensitiveValue = value
+            if (timeout > 0) {
+                clipboardJob = viewModelScope.launch {
+                    delay(timeout * 1000L)
+                    if (clearSensitiveClipboardIfOwned()) {
+                        _clipboardStatus.value = "Clipboard cleared for security"
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Clears the clipboard ONLY if it still contains the sensitive value placed by VaultZero,
+     * preserving unrelated user clipboard contents from other applications.
+     */
+    fun clearSensitiveClipboardIfOwned(): Boolean {
+        val tracked = lastCopiedSensitiveValue ?: return false
+        return try {
+            val currentClip = clipboardManager.primaryClip
+            val currentText = if (currentClip != null && currentClip.itemCount > 0) {
+                currentClip.getItemAt(0).text?.toString()
+            } else {
+                null
+            }
+            if (currentText == tracked) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    clipboardManager.clearPrimaryClip()
+                } else {
+                    clipboardManager.setPrimaryClip(ClipData.newPlainText("", ""))
+                }
+                lastCopiedSensitiveValue = null
+                true
+            } else {
+                lastCopiedSensitiveValue = null
+                false
+            }
+        } catch (e: Exception) {
+            lastCopiedSensitiveValue = null
+            false
         }
     }
 
@@ -521,7 +686,20 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     // -------------------------------------------------------------------------
 
     fun updateGeneratorConfig(config: GeneratorConfig) {
-        _generatorConfig.value = config
+        if (!config.isPassphraseMode &&
+            !config.includeUpper &&
+            !config.includeLower &&
+            !config.includeDigits &&
+            !config.includeSymbols
+        ) {
+            _clipboardStatus.value = "At least one character set must remain enabled"
+            return
+        }
+        val clampedConfig = config.copy(
+            length = config.length.coerceIn(8, 64),
+            passphraseWords = config.passphraseWords.coerceIn(3, 8)
+        )
+        _generatorConfig.value = clampedConfig
         regeneratePassword()
         onUserInteraction()
     }
@@ -575,7 +753,6 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             _clipboardStatus.value = "Biometric unlock disabled"
         }
     }
-
 
     fun toggleTheme(isDark: Boolean) {
         repository.setDarkTheme(isDark)

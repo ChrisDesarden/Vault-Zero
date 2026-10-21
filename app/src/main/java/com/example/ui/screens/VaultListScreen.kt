@@ -117,7 +117,7 @@ fun VaultListScreen(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "LOCKED AES-256",
+                                text = "UNLOCKED • AES-256",
                                 fontFamily = JetBrainsMonoFamily,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,

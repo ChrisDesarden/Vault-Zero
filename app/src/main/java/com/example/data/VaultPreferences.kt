@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.crypto.VaultCrypto
 
 class VaultPreferences(context: Context) {
 
@@ -32,6 +33,12 @@ class VaultPreferences(context: Context) {
             prefs.edit().putString("recovery_salt_b64", value).commit()
         }
 
+    var kdfIterations: Int
+        get() = prefs.getInt("kdf_iterations", VaultCrypto.DEFAULT_ITERATIONS)
+        set(value) {
+            prefs.edit().putInt("kdf_iterations", value).commit()
+        }
+
     var encryptedVmkByPassword: String
         get() = prefs.getString("encrypted_vmk_by_password", "") ?: ""
         set(value) {
@@ -44,11 +51,24 @@ class VaultPreferences(context: Context) {
             prefs.edit().putString("encrypted_vmk_by_recovery", value).commit()
         }
 
-    var recoveryPhrase: String
-        get() = prefs.getString("recovery_phrase", "") ?: ""
+    var encryptedRecoveryPhrase: String
+        get() = prefs.getString("encrypted_recovery_phrase", "") ?: ""
         set(value) {
-            prefs.edit().putString("recovery_phrase", value).commit()
+            prefs.edit()
+                .putString("encrypted_recovery_phrase", value)
+                .remove("recovery_phrase")
+                .commit()
         }
+
+    /**
+     * Read-only access to legacy plaintext recovery_phrase for one-time encrypted migration.
+     */
+    val legacyPlaintextRecoveryPhrase: String
+        get() = prefs.getString("recovery_phrase", "") ?: ""
+
+    fun clearLegacyPlaintextRecoveryPhrase() {
+        prefs.edit().remove("recovery_phrase").commit()
+    }
 
     var recoveryPhraseHash: String
         get() = prefs.getString("recovery_phrase_hash", "") ?: ""
@@ -92,17 +112,20 @@ class VaultPreferences(context: Context) {
         recoverySaltBase64: String,
         encryptedVmkByPassword: String,
         encryptedVmkByRecovery: String,
-        recoveryPhrase: String,
+        encryptedRecoveryPhrase: String,
         recoveryPhraseHash: String,
-        keyFingerprint: String
+        keyFingerprint: String,
+        kdfIterations: Int = VaultCrypto.DEFAULT_ITERATIONS
     ) {
         prefs.edit()
             .putString("master_password_hash", passwordHash)
             .putString("master_salt_b64", saltBase64)
             .putString("recovery_salt_b64", recoverySaltBase64)
+            .putInt("kdf_iterations", kdfIterations)
             .putString("encrypted_vmk_by_password", encryptedVmkByPassword)
             .putString("encrypted_vmk_by_recovery", encryptedVmkByRecovery)
-            .putString("recovery_phrase", recoveryPhrase)
+            .putString("encrypted_recovery_phrase", encryptedRecoveryPhrase)
+            .remove("recovery_phrase")
             .putString("recovery_phrase_hash", recoveryPhraseHash)
             .putString("key_fingerprint", keyFingerprint)
             .putBoolean("is_initialized", true)

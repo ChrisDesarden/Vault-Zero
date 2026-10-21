@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,13 +53,11 @@ import com.example.model.IdentityPayload
 import com.example.model.LoginPayload
 import com.example.model.NotePayload
 import com.example.model.VaultItem
-import com.example.model.VaultType
 import com.example.ui.VaultViewModel
 import com.example.ui.components.SensitiveValueRow
 import com.example.ui.components.StrengthMeter
 import com.example.ui.components.TotpLiveBadge
 import com.example.ui.components.VaultTypeIcon
-import com.example.ui.theme.CyberCyan
 import com.example.ui.theme.CyberEmerald
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.JetBrainsMonoFamily
@@ -107,7 +99,7 @@ fun ItemDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         VaultTypeIcon(type = item.type)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
@@ -257,6 +249,26 @@ fun ItemDetailDialog(
                                 isMaskable = true
                             )
                         }
+                        if (p.brand.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Card Brand",
+                                value = p.brand,
+                                onCopy = { viewModel.copySecurely("Brand", p.brand, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
+                        if (p.notes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Notes",
+                                value = p.notes,
+                                onCopy = { viewModel.copySecurely("Notes", p.notes, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
                     }
 
                     is ApiSecretPayload -> {
@@ -293,9 +305,49 @@ fun ItemDetailDialog(
                             isMonospace = false,
                             isMaskable = false
                         )
+                        if (p.scopes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Scopes",
+                                value = p.scopes,
+                                onCopy = { viewModel.copySecurely("Scopes", p.scopes, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
+                        if (p.endpointUrl.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Endpoint URL",
+                                value = p.endpointUrl,
+                                onCopy = { viewModel.copySecurely("Endpoint URL", p.endpointUrl, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
+                        if (p.notes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Notes",
+                                value = p.notes,
+                                onCopy = { viewModel.copySecurely("Notes", p.notes, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
                     }
 
                     is CryptoPayload -> {
+                        if (p.walletName.isNotEmpty()) {
+                            SensitiveValueRow(
+                                label = "Wallet Name",
+                                value = p.walletName,
+                                onCopy = { viewModel.copySecurely("Wallet Name", p.walletName, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
                         SensitiveValueRow(
                             label = "Network",
                             value = p.network,
@@ -329,6 +381,25 @@ fun ItemDetailDialog(
                                 onCopy = { viewModel.copySecurely("Private Key", p.privateKey, true) },
                                 isMaskable = true
                             )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                        if (p.derivationPath.isNotEmpty()) {
+                            SensitiveValueRow(
+                                label = "Derivation Path",
+                                value = p.derivationPath,
+                                onCopy = { viewModel.copySecurely("Derivation Path", p.derivationPath, false) },
+                                isMaskable = false
+                            )
+                        }
+                        if (p.notes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Notes",
+                                value = p.notes,
+                                onCopy = { viewModel.copySecurely("Notes", p.notes, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
                         }
                     }
 
@@ -336,7 +407,7 @@ fun ItemDetailDialog(
                         SensitiveValueRow(
                             label = "Secure Note Content",
                             value = p.content,
-                            onCopy = { viewModel.copySecurely("Note", p.content, false) },
+                            onCopy = { viewModel.copySecurely("Note", p.content, true) },
                             isMonospace = false,
                             isMaskable = false
                         )
@@ -357,6 +428,36 @@ fun ItemDetailDialog(
                             onCopy = { viewModel.copySecurely("ID Number", p.idNumber, true) },
                             isMaskable = true
                         )
+                        if (p.birthDate.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Birth Date",
+                                value = p.birthDate,
+                                onCopy = { viewModel.copySecurely("Birth Date", p.birthDate, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
+                        if (p.expiryDate.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Expiry Date",
+                                value = p.expiryDate,
+                                onCopy = { viewModel.copySecurely("Expiry Date", p.expiryDate, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
+                        if (p.notes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SensitiveValueRow(
+                                label = "Notes",
+                                value = p.notes,
+                                onCopy = { viewModel.copySecurely("Notes", p.notes, false) },
+                                isMonospace = false,
+                                isMaskable = false
+                            )
+                        }
                     }
                 }
 
@@ -369,7 +470,7 @@ fun ItemDetailDialog(
                 ) {
                     OutlinedButton(
                         onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).testTag("delete_item_button"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed)
                     ) {
@@ -404,6 +505,7 @@ fun ItemDetailDialog(
                         showDeleteConfirm = false
                         viewModel.deleteItem(item)
                     },
+                    modifier = Modifier.testTag("confirm_delete_button"),
                     colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                 ) {
                     Text("Delete Permanently")

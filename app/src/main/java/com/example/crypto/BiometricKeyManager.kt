@@ -1,6 +1,7 @@
 package com.example.crypto
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -28,6 +29,25 @@ object BiometricKeyManager {
                 KeyProperties.KEY_ALGORITHM_AES,
                 ANDROID_KEYSTORE
             )
+            // Attempt StrongBox hardware security module first on API 28+, fallback to standard TEE Keystore
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                try {
+                    val strongBoxSpec = KeyGenParameterSpec.Builder(
+                        KEY_ALIAS,
+                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                    )
+                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                        .setKeySize(256)
+                        .setIsStrongBoxBacked(true)
+                        .build()
+                    keyGenerator.init(strongBoxSpec)
+                    return keyGenerator.generateKey()
+                } catch (e: Exception) {
+                    // Fallback to standard TEE Keystore if StrongBox is not present on device
+                }
+            }
+
             val spec = KeyGenParameterSpec.Builder(
                 KEY_ALIAS,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
@@ -70,6 +90,57 @@ object BiometricKeyManager {
     }
 
     /**
+     * Initializes and returns a DECRYPT_MODE Cipher bound to the stored IV for use with BiometricPrompt.CryptoObject.
+     */
+    fun getDecryptCipher(context: Context): Cipher? {
+        return try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val encoded = prefs.getString(PREF_KEY_ENCRYPTED_VMK, null) ?: return null
+            val combined = Base64.decode(encoded, Base64.NO_WRAP)
+            if (combined.size < 12 + 16) return null
+
+            val iv = ByteArray(12)
+            System.arraycopy(combined, 0, iv, 0, 12)
+
+            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+            keyStore.load(null)
+            val secretKey = keyStore.getKey(KEY_ALIAS, null) as? SecretKey ?: return null
+
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            val spec = GCMParameterSpec(128, iv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+            cipher
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Decrypts the stored VMK using an authenticated BiometricPrompt CryptoObject Cipher if provided,
+     * or falls back to direct Keystore decryption when Device Credential fallback was used.
+     */
+    fun decryptVmkWithCipher(context: Context, authenticatedCipher: Cipher?): String? {
+        if (authenticatedCipher == null) {
+            return getDecryptedVmk(context)
+        }
+        return try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val encoded = prefs.getString(PREF_KEY_ENCRYPTED_VMK, null) ?: return null
+            val combined = Base64.decode(encoded, Base64.NO_WRAP)
+            if (combined.size < 12 + 16) return null
+
+            val cipherTextSize = combined.size - 12
+            val cipherText = ByteArray(cipherTextSize)
+            System.arraycopy(combined, 12, cipherText, 0, cipherTextSize)
+
+            val decryptedBytes = authenticatedCipher.doFinal(cipherText)
+            String(decryptedBytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            getDecryptedVmk(context)
+        }
+    }
+
+    /**
      * Retrieve and decrypt the Vault Master Key using the Keystore key
      */
     fun getDecryptedVmk(context: Context): String? {
@@ -78,7 +149,7 @@ object BiometricKeyManager {
             val encoded = prefs.getString(PREF_KEY_ENCRYPTED_VMK, null) ?: return null
 
             val combined = Base64.decode(encoded, Base64.NO_WRAP)
-            if (combined.size < 12) return null
+            if (combined.size < 12 + 16) return null
 
             val iv = ByteArray(12)
             System.arraycopy(combined, 0, iv, 0, 12)

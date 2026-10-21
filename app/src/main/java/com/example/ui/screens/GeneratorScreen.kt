@@ -165,7 +165,7 @@ fun GeneratorScreen(
 
                     Button(
                         onClick = {
-                            viewModel.startCreateItem(VaultType.LOGIN)
+                            viewModel.saveGeneratedPasswordToVault()
                         },
                         modifier = Modifier.weight(1.2f).testTag("save_generated_button"),
                         shape = RoundedCornerShape(12.dp),

@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -78,6 +79,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Protect all sensitive vault screens from screenshots, screen recording, and Recent Apps previews
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
         enableEdgeToEdge()
 
         // Listen for Biometric Prompt trigger events from ViewModel
@@ -94,6 +100,11 @@ class MainActivity : FragmentActivity() {
                 VaultZeroApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.checkAutoLockTimeout()
     }
 
     private fun launchNativeBiometricPrompt() {
@@ -115,7 +126,7 @@ class MainActivity : FragmentActivity() {
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         super.onAuthenticationSucceeded(result)
-                        viewModel.onBiometricVerified()
+                        viewModel.onBiometricVerified(result.cryptoObject?.cipher)
                     }
 
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {

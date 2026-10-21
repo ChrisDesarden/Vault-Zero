@@ -1,10 +1,7 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,9 +21,9 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -55,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.VaultViewModel
@@ -73,6 +71,8 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showRecoveryDialog by remember { mutableStateOf(false) }
     var showSpecsDialog by remember { mutableStateOf(false) }
+    var exportedBackupJson by remember { mutableStateOf<String?>(null) }
+    var showImportDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -281,14 +281,59 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { showRecoveryDialog = true }
-                        .padding(vertical = 10.dp),
+                        .padding(vertical = 10.dp)
+                        .testTag("view_recovery_kit_row"),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(imageVector = Icons.Default.Key, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("View 12-Word Recovery Kit", fontWeight = FontWeight.SemiBold)
-                        Text("Print or safely write down emergency phrase", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Decrypt and view your emergency recovery phrase", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Export Encrypted Backup
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            viewModel.exportBackupJson { json ->
+                                exportedBackupJson = json
+                            }
+                        }
+                        .padding(vertical = 10.dp)
+                        .testTag("export_backup_row"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(imageVector = Icons.Default.Download, contentDescription = null, tint = CyberCyan, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Export Encrypted Vault Backup", fontWeight = FontWeight.SemiBold)
+                        Text("Generate AES-256-GCM encrypted JSON backup envelope", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Import Encrypted Backup
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { showImportDialog = true }
+                        .padding(vertical = 10.dp)
+                        .testTag("import_backup_row"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(imageVector = Icons.Default.Upload, contentDescription = null, tint = CyberEmerald, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Restore / Import Encrypted Backup", fontWeight = FontWeight.SemiBold)
+                        Text("Import records from a VaultZero encrypted JSON backup", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
@@ -307,7 +352,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Cryptographic Specifications", fontWeight = FontWeight.SemiBold)
-                        Text("AES-256-GCM, PBKDF2, Zero Telemetry verification", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("AES-256-GCM, PBKDF2-HMAC-SHA256, Zero Telemetry", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -363,13 +408,14 @@ fun SettingsScreen(
     }
 
     if (showRecoveryDialog) {
+        val currentPhrase = remember { viewModel.recoveryPhrase }
         AlertDialog(
             onDismissRequest = { showRecoveryDialog = false },
             title = { Text("Emergency Recovery Kit") },
             text = {
                 Column {
                     Text(
-                        text = "12-word seed phrase for master key recovery:",
+                        text = "12-word seed phrase for master key recovery (decrypted in memory):",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -381,7 +427,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = viewModel.recoveryPhrase,
+                            text = currentPhrase.ifEmpty { "Unavailable (Vault locked)" },
                             fontFamily = JetBrainsMonoFamily,
                             fontWeight = FontWeight.Bold,
                             color = WarningAmber,
@@ -394,7 +440,9 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.copySecurely("Recovery Kit", viewModel.recoveryPhrase, true)
+                        if (currentPhrase.isNotEmpty()) {
+                            viewModel.copySecurely("Recovery Kit", currentPhrase, true)
+                        }
                         showRecoveryDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CyberEmerald, contentColor = Color.Black)
@@ -408,6 +456,94 @@ fun SettingsScreen(
         )
     }
 
+    exportedBackupJson?.let { json ->
+        AlertDialog(
+            onDismissRequest = { exportedBackupJson = null },
+            title = { Text("Encrypted Backup Envelope") },
+            text = {
+                Column {
+                    Text(
+                        text = "All item payloads and keys in this JSON envelope are encrypted with AES-256-GCM.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = json,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth().height(180.dp),
+                        maxLines = 8
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.copySecurely("Encrypted Backup", json, isSensitive = false)
+                        exportedBackupJson = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CyberEmerald, contentColor = Color.Black)
+                ) {
+                    Text("Copy Backup JSON")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { exportedBackupJson = null }) { Text("Close") }
+            }
+        )
+    }
+
+    if (showImportDialog) {
+        var importJsonText by remember { mutableStateOf("") }
+        var backupPassword by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text("Import Encrypted Backup") },
+            text = {
+                Column {
+                    Text(
+                        text = "Paste your VaultZero encrypted JSON backup below. If the backup came from a different vault key, enter its Master Password.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = importJsonText,
+                        onValueChange = { importJsonText = it },
+                        label = { Text("Encrypted Backup JSON") },
+                        modifier = Modifier.fillMaxWidth().height(130.dp),
+                        maxLines = 5
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = backupPassword,
+                        onValueChange = { backupPassword = it },
+                        label = { Text("Backup Master Password (if from another vault)") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.importBackupJson(importJsonText, backupPassword.ifBlank { null })
+                        showImportDialog = false
+                    },
+                    enabled = importJsonText.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = CyberEmerald, contentColor = Color.Black)
+                ) {
+                    Text("Decrypt & Import")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     if (showSpecsDialog) {
         AlertDialog(
             onDismissRequest = { showSpecsDialog = false },
@@ -415,10 +551,10 @@ fun SettingsScreen(
             text = {
                 Column {
                     Text(
-                        text = "• Cipher: AES-256-GCM authenticated encryption (128-bit authentication tag, unique 12-byte IV per record).\n\n" +
-                                "• Key Derivation: PBKDF2WithHmacSHA256 with 100,000 rounds and 128-bit random salt.\n\n" +
-                                "• 2FA Authenticator: RFC 6238 TOTP with HMAC-SHA1 30-second window.\n\n" +
-                                "• Client-Side Zero-Knowledge: Data is encrypted locally before touching storage. No remote servers, trackers, or telemetric data collection.",
+                        text = "• Cipher: AES-256-GCM authenticated encryption (128-bit authentication tag, unique 12-byte IV per record, per-record GCM AAD binding).\n\n" +
+                                "• Zero Metadata Leakage: Record titles, categories, tags, and payloads are encrypted together inside AES-256-GCM; SQLite columns store redacted placeholders.\n\n" +
+                                "• Key Derivation & Recovery: PBKDF2WithHmacSHA256 (100,000 rounds), 128-bit CSPRNG salt, HMAC-SHA256 verifiers, and SHA-256 checksummed 12-word recovery mnemonic.\n\n" +
+                                "• Client-Side Zero-Knowledge: Zero network permissions, zero remote servers, StrongBox/TEE Keystore, and FLAG_SECURE window protection.",
                         style = MaterialTheme.typography.bodySmall,
                         lineHeight = 20.sp
                     )
