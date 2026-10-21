@@ -382,6 +382,16 @@ fun SettingsScreen(
             Text("Reset & Erase Vault Completely")
         }
 
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "VaultZero v1.0.0 (Build 1) • 100% FOSS Air-Gapped Build",
+            fontFamily = JetBrainsMonoFamily,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
         Spacer(modifier = Modifier.height(80.dp))
     }
 

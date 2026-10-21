@@ -1,10 +1,12 @@
-VaultZero is a zero-knowledge, air-gapped cryptographic vault and password manager for Android. It operates strictly offline with zero network permissions, zero telemetry, and hardware-backed encryption.
+VaultZero is a zero-knowledge, air-gapped cryptographic vault and password manager for Android. Built with 100% Kotlin and Jetpack Compose, it operates strictly offline with zero network permissions, zero telemetry, and hardware-backed authenticated encryption.
 
 Key Features:
-• Dual-Envelope Key Architecture: A random 256-bit Vault Master Key (VMK) is wrapped independently by your Master Password KEK (PBKDF2-HMAC-SHA256, 210,000 iterations) and an Android Keystore hardware-backed AES-256-GCM biometric key.
-• Full Payload Encryption: Vault records (Logins, Payment Cards, Secure Notes, Identity Documents, SSH Keys, and BIP-39 Seed Phrases) are serialized into single AES-256-GCM authenticated ciphertext blobs inside an encrypted Room database.
-• Built-In RFC 6238 Authenticator: Live 30-second TOTP codes (SHA1, SHA256, SHA512; 6 or 8 digits) and otpauth:// URI parser.
-• Cryptographic Generators: High-entropy password generator, EFF diceware passphrase generator, and BIP-39 recovery seed phrase generator using SecureRandom.
-• Security Audit Engine: Offline inspection for reused passwords, weak entropy, compromised patterns, and overdue key rotation.
-• Active Defense: Duress/Decoy password support, Panic Wipe emergency destruction, FLAG_SECURE screenshot blocking, and automatic clipboard scrubbing.
-• Portable Encrypted Backups: Export and restore self-contained .vzero AES-256-GCM encrypted backup containers.
+• 5 Specialized Secret Vault Types: Logins & Passwords (with live 30-second RFC 6238 TOTP 2FA codes), Payment Cards, Secure Notes, Crypto Wallets & Seed Phrases, and API/Developer Keys.
+• Full Record Metadata Encryption (_vz_meta_v2): Record titles, categories, and tags are serialized inside the AES-256-GCM encrypted payload and redacted ([REDACTED]) in raw SQLite columns and backup files.
+• Per-Record GCM AAD Row Binding: Every record's AES-256-GCM authentication tag is cryptographically bound to its id, type, timestamps, and favorite state via Additional Authenticated Data (AAD), preventing cross-row ciphertext tampering.
+• Dual-Envelope Key Hierarchy: A random 256-bit Vault Master Key (VMK) encrypts vault records and is wrapped independently by your Master Password KEK and your 12-Word SHA-256 Checksummed Recovery Phrase KEK using PBKDF2-HMAC-SHA256 (100,000 iterations).
+• Hardware-Backed Biometric Unlock: Uses Android Keystore AES-256-GCM keys (StrongBox / TEE hardware-bound) with BiometricPrompt.CryptoObject.
+• Interactive Security Audit & Entropy Dashboard: Real-time Shannon + character-pool entropy scoring, weak/reused password detection, stale credential alerts, and malformed Base32 TOTP checks.
+• Built-In Cryptographic Generators: High-entropy CSPRNG password generator and EFF diceware passphrase generator powered by java.security.SecureRandom.
+• Portable Encrypted Backups: Export and restore self-contained AES-256-GCM encrypted vault backup containers using either your Master Password or 12-Word Recovery Phrase.
+• Runtime Security Hygiene: FLAG_SECURE screenshot blocking, sensitive clipboard masking with automatic clearing, and configurable inactivity auto-lock.

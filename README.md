@@ -76,11 +76,11 @@ apksigner verify --print-certs VaultZero-v1.0.0.apk
 - **Per-Record GCM AAD Row Binding**:
   - Every record's AES-256-GCM authentication tag is cryptographically bound to its `id`, `type`, `createdAt`, `updatedAt`, and `isFavorite` metadata via Additional Authenticated Data (AAD), preventing cross-row ciphertext swapping in SQLite or backup files.
 - **Dual-Envelope Key Wrapping & Instant Key Rotation**:
-  - A random 256-bit **Vault Master Key (VMK)** encrypts vault records and is wrapped independently by your **Master Password KEK** and your **12-Word Recovery Phrase KEK** (`PBKDF2-HMAC-SHA256`, 310,000 iterations).
+  - A random 256-bit **Vault Master Key (VMK)** encrypts vault records and is wrapped independently by your **Master Password KEK** and your **12-Word Recovery Phrase KEK** (`PBKDF2-HMAC-SHA256`, 100,000 iterations).
 - **Hardware-Backed Biometric Unlock**:
   - Uses Android Keystore (`AES/GCM/NoPadding`, StrongBox hardware-backed where supported) paired with `BiometricPrompt.CryptoObject` for hardware-authenticated biometric unlocking.
 - **Interactive Security Audit & Entropy Dashboard**:
-  - Real-time calculation of Shannon + character-pool entropy (in bits), weak/reused/compromised password detection, aging secret alerts (>180 days), and 2FA coverage score.
+  - Real-time calculation of Shannon + character-pool entropy (in bits), weak/reused/compromised password detection, aging secret alerts (>180 days), and malformed Base32 2FA validation (without penalizing logins that do not use 2FA).
 - **Built-In Cryptographic Toolkit**:
   - High-entropy random **Password Generator** and **EFF Diceware Passphrase Generator** powered by `java.security.SecureRandom`.
 - **Self-Contained Encrypted `.vzero` Backups**:
@@ -95,7 +95,7 @@ apksigner verify --print-certs VaultZero-v1.0.0.apk
 | Component | Specification |
 | :--- | :--- |
 | **Data Encryption Cipher** | `AES-256-GCM` (`AES/GCM/NoPadding`) with 96-bit `SecureRandom` IV and 128-bit authentication tag |
-| **Key Derivation Function (KDF)** | `PBKDF2WithHmacSHA256` with **310,000 iterations** (OWASP 2023+ recommendation) and 128-bit random salt |
+| **Key Derivation Function (KDF)** | `PBKDF2WithHmacSHA256` with **100,000 iterations** and 128-bit CSPRNG salt |
 | **Key Hierarchy** | 256-bit random **Vault Master Key (VMK)** wrapped independently by Master Password KEK and Recovery Phrase KEK |
 | **Record AAD Binding** | `VaultZero-Record-v2\|<id>\|<type>\|<createdAt>\|<updatedAt>\|<isFavorite>` |
 | **Recovery Phrase Format** | 12-word mnemonic from curated 256-word cryptographic dictionary with **SHA-256 checksum** embedded in the 12th word |
@@ -107,26 +107,42 @@ apksigner verify --print-certs VaultZero-v1.0.0.apk
 
 - **Zero Network Access**: `AndroidManifest.xml` requests **no `android.permission.INTERNET`**. The app cannot transmit telemetry, analytics, or vault data to any remote server.
 - **Disabled OS Cloud Auto-Backup**: Configured with `android:allowBackup="false"` alongside strict `data_extraction_rules.xml` and `backup_rules.xml` excluding SQLite databases and shared preferences from unencrypted OS device-to-device transfers.
-- **RAM Zeroization**: Derived keys and decryptedVMK byte arrays are explicitly overwritten with `0x00` (`Arrays.fill(key, 0.toByte())`) immediately when the vault locks.
+- **RAM Zeroization**: Derived keys and decrypted VMK byte arrays are explicitly overwritten with `0x00` (`Arrays.fill(key, 0.toByte())`) immediately when the vault locks.
+
+---
+
+## 📦 F-Droid Compliance & Submission Guide
+
+**VaultZero** is 100% compliant with the [F-Droid Inclusion Policy](https://f-droid.org/docs/Inclusion_Policy/) and [Submitting to F-Droid Quick Start Guide](https://f-droid.org/docs/Submitting_to_F-Droid_Quick_Start_Guide/):
+
+- **100% FOSS Dependencies & Build Plugins**: Built exclusively with open-source Jetpack Compose, Room, Biometric, and Kotlin Coroutines libraries. All proprietary Google Play Services (`com.google.gms.google-services`) and Firebase plugins/SDKs are completely excluded, and `dependenciesInfo { includeInApk = false; includeInBundle = false }` disables Google's proprietary dependency signing block.
+- **Upstream Fastlane Metadata Included**:
+  - `fastlane/metadata/android/en-US/title.txt`
+  - `fastlane/metadata/android/en-US/short_description.txt` (`< 80` characters, no trailing period)
+  - `fastlane/metadata/android/en-US/full_description.txt`
+  - `fastlane/metadata/android/en-US/changelogs/1.txt` (`<= 500` bytes for `versionCode = 1`)
+  - `fastlane/metadata/android/en-US/images/icon.png` (`512x512` PNG)
+  - `fastlane/metadata/android/en-US/images/phoneScreenshots/` (`1.png`, `2.png`, `3.png`)
+- **Ready-to-Submit F-Droid Build Recipe**:
+  - Copy [`fdroid/com.aistudio.vaultzero.secvlt.yml`](fdroid/com.aistudio.vaultzero.secvlt.yml) to `metadata/com.aistudio.vaultzero.secvlt.yml` in your fork of [`fdroid/fdroiddata`](https://gitlab.com/fdroid/fdroiddata), ensure your repository has the `v1.0.0` Git tag pushed, and open a Merge Request titled `New App: com.aistudio.vaultzero.secvlt`.
 
 ---
 
 ## 🛠️ Building from Source & Running Tests
 
 ### Prerequisites
-- **Android Studio** Ladybug (2024.2.1) or newer
-- **JDK 11+**
+- **Android Studio** Ladybug (2024.2.1) or newer (or command-line Android SDK tools)
+- **JDK 11+** (JDK 17/21 recommended for AGP 9.1.1)
 - **Android SDK** API 36
 
-### Build Debug APK via Gradle
+### Build Debug or Release APK via Gradle
 ```bash
 gradle :app:assembleDebug
+gradle :app:assembleRelease
 ```
-The compiled APK will be generated at:
-`app/build/outputs/apk/debug/app-debug.apk`
 
 ### Run Unit & Robolectric Security Suite
-VaultZero includes a comprehensive JUnit 4 + Robolectric test suite verifying AES-256-GCM tamper detection, PBKDF2 key derivation, SHA-256 recovery mnemonic checksum validation, SQLite metadata redaction, AAD row-swap rejection, and portable `.vzero` backup recovery:
+VaultZero includes a comprehensive JUnit 4 + Robolectric test suite verifying AES-256-GCM tamper detection, PBKDF2 key derivation, SHA-256 recovery mnemonic checksum validation, SQLite metadata redaction, AAD row-swap rejection, optional 2FA audit accuracy, and portable `.vzero` backup recovery:
 
 ```bash
 gradle :app:testDebugUnitTest

@@ -22,7 +22,7 @@ Always verify the integrity of your downloaded APK before installing on a produc
 
 - **File Name:** `VaultZero-v1.0.0.apk`
 - **Package ID (`applicationId`):** `com.aistudio.vaultzero.secvlt`
-- **Version:** `1.0` (`versionCode = 1`)
+- **Version:** `1.0.0` (`versionCode = 1`)
 - **Minimum SDK:** Android 7.0 Nougat (`API 24`)
 - **Target / Compile SDK:** Android 16 (`API 36`)
 - **Network Permissions:** **NONE** (`INTERNET` and `ACCESS_NETWORK_STATE` strictly omitted)

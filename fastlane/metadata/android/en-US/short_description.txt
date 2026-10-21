@@ -1,1 +1,1 @@
-Zero-knowledge, 100% offline encrypted password manager & cryptographic vault.
+Zero-knowledge, 100% offline encrypted password manager & cryptographic vault
